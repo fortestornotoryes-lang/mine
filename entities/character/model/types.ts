@@ -1,0 +1,87 @@
+
+/**
+ * Интерфейс, описывающий все параметры персонажа, приходящие от API ChaosAge.
+ */
+export interface CharacterParams {
+  maxHP: string;
+  currentHP: string;
+  recoveryHP: string;
+  maxMP: string;
+  currentMP: string;
+  recoveryMP: string;
+  maxAP: string;
+  baseAP: string;
+  baseAPExact: string;
+  ap_start: string;
+  rage: string;
+  rageLimit: string;
+  attack: string;
+  defence: string;
+  armor: string;
+  minDamage: string;
+  maxDamage: string;
+  critical: string;
+  criticalDamage: string;
+  bleedingChance: string;
+  resistance: string;
+  parry: string;
+  pierce: string;
+  fastness: string;
+  reaction: string;
+  absorbtion: string;
+  shieldBlock: string;
+  dualHit: string;
+  poisonResist: string;
+  maxWeight: string;
+  currentWeight: string;
+  damageFactor: string;
+  charmFactor: string;
+  summonFactor: string;
+  crit4x: string;
+  reflectionResist: string;
+  manaExpDecrease_elem: string;
+  manaExpDecrease_mind: string;
+  manaExpDecrease_light: string;
+  manaExpDecrease_dark: string;
+  manaExpDecrease_faith: string;
+  manaExpDecrease_alch: string;
+  manaExpDecrease_plague: string;
+  vamp_magical: string;
+  vamp_physical: string;
+  summons_ap_abs: string;
+  summons_ap_perc: string;
+  summons_ap_start: string;
+  resistance_pierce_perc: string;
+  resistance_pierce_abs: string;
+  rage_max: string;
+  rage_gain: string;
+  evasion: string;
+  faithSeal1: string;
+  faithSeal2: string;
+  faithEffect: string;
+  faith: string;
+  exorcism: string;
+  defiler: string;
+  graySores: string;
+  blackSores: string;
+  plagueBringer: string;
+  poisonVeil: string;
+  toxinoPhobia: string;
+  activatedToxins: string;
+  plagueDoctorDamage: string;
+  armorShield: string;
+  resistanceShield: string;
+  armorShieldAuxDamage: string;
+  resistanceShieldAuxDamage: string;
+  reflectionPhysical: string;
+  reflectionMagic: string;
+  counterstrike: string;
+  evasionMagic: string;
+  alchemyDamageFactor: string;
+  alchemyCharmFactor: string;
+  alchemyReactionsPower: string;
+  alchemyPotionsSaveChance: string;
+  poisonResist_pierce: string;
+  grace: string;
+}
+

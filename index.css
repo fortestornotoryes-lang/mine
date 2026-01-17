@@ -5,6 +5,13 @@ button{
     cursor: pointer;
 
 }
+
+@theme{
+    --color-bg: '#1a1b26';
+    --color-wall: '#0f0f14';
+    --color-road: '#24283b';
+    --color-highlight: '#7aa2f7';
+}
 body {
     font-family: 'Inter', sans-serif;
     background-color: #06070a;
@@ -16,6 +23,21 @@ body {
 }
 .font-unbounded {
     font-family: 'Unbounded', sans-serif;
+}
+
+.dungeon-scroll::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+.dungeon-scroll::-webkit-scrollbar-track {
+    background: #1a1b26;
+}
+.dungeon-scroll::-webkit-scrollbar-thumb {
+    background: #414868;
+    border-radius: 4px;
+}
+.dungeon-scroll::-webkit-scrollbar-thumb:hover {
+    background: #565f89;
 }
 ::-webkit-scrollbar {
     width: 6px;

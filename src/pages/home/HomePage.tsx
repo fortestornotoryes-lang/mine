@@ -2,8 +2,8 @@
 import { DungeonPage }                from "@/widgets/DungeonViewer/ui/DungeonPage.tsx";
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence }    from 'motion/react';
-import { CharacterViewer }                                 from '../../widgets/character-viewer/ui/CharacterViewer.tsx';
-import { MineViewer }                                      from '../../widgets/mine-viewer/ui/MineViewer.tsx';
+import { CharacterViewer }                                 from '@/widgets/character-viewer/ui/CharacterViewer.tsx';
+import { MineViewer }                                      from '@/widgets/mine-viewer/ui/MineViewer.tsx';
 import { ShieldCheck, Pickaxe, Users, Database, Activity } from 'lucide-react';
 
 type TabType = 'mines' | 'characters' | 'dungeon';

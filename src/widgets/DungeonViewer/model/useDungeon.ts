@@ -1,12 +1,17 @@
-import { DEFAULT_SETTINGS, INITIAL_GRID } from "@/src/entities/path/model/constants.ts";
+import { DEFAULT_SETTINGS, INITIAL_GRID } from "@/entities/path/model/constants.ts";
 import { useState, useEffect, useCallback } from 'react';
 import { Point }                            from "@/shared/types";
 import { RawDungeonCell, CellType }         from "@/entities/dungeon/model/types.ts";
 import { PathResult, PathfinderSettings }   from "@/entities/path/model/types.ts";
 import { solveDungeon }                     from "@/entities/path/lib/solver.ts";
 
-export const useDungeon = () => {
-  // Загружаем сетку из LS или используем пустую
+export interface UseDungeonOptions {
+  isDrawMode?: boolean;
+}
+
+export const useDungeon = (options?: UseDungeonOptions) => {
+  const { isDrawMode = false } = options ?? {};
+
   const [grid, setGrid] = useState<RawDungeonCell[][]>(() => {
     try {
         const savedGrid = localStorage.getItem('dungeonGrid');
@@ -17,7 +22,6 @@ export const useDungeon = () => {
     }
   });
 
-  // Загружаем старт пользователя из LS
   const [userStart, setUserStart] = useState<Point | null>(() => {
       try {
           const savedStart = localStorage.getItem('dungeonUserStart');
@@ -30,7 +34,6 @@ export const useDungeon = () => {
 
   const [isCalculating, setIsCalculating] = useState(false);
 
-  // Инициализация настроек из localStorage или дефолт
   const [settings, setSettings] = useState<PathfinderSettings>(() => {
     try {
       const saved = localStorage.getItem('dungeonPathfinderSettings');
@@ -43,7 +46,6 @@ export const useDungeon = () => {
 
   const [pathResult, setPathResult] = useState<PathResult | null>(null);
 
-  // Сохранение настроек при изменении
   useEffect(() => {
     try {
       localStorage.setItem('dungeonPathfinderSettings', JSON.stringify(settings));
@@ -52,7 +54,6 @@ export const useDungeon = () => {
     }
   }, [settings]);
 
-  // Сохранение сетки при изменении
   useEffect(() => {
     if (grid.length > 0) {
         try {
@@ -63,7 +64,6 @@ export const useDungeon = () => {
     }
   }, [grid]);
 
-  // Сохранение точки старта
   useEffect(() => {
       try {
           if (userStart) {
@@ -76,7 +76,6 @@ export const useDungeon = () => {
       }
   }, [userStart]);
 
-  // Обработка загрузки файла
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -87,9 +86,9 @@ export const useDungeon = () => {
         const json = JSON.parse(event.target?.result as string);
         if (Array.isArray(json) && Array.isArray(json[0])) {
           setGrid(json);
-          setUserStart(null); // Сброс ручного старта при загрузке новой карты
+          setUserStart(null);
+          setPathResult(null);
         } else {
-          // TODO: Заменить на систему уведомлений
           console.error('Invalid JSON structure. Expected a 2D array.');
           alert('Неверная структура JSON. Ожидается двумерный массив.');
         }
@@ -102,7 +101,6 @@ export const useDungeon = () => {
     e.target.value = '';
   };
 
-  // Обработка сохранения файла
   const handleFileDownload = () => {
     if (grid.length === 0) {
         alert("Нет данных карты для сохранения.");
@@ -125,12 +123,15 @@ export const useDungeon = () => {
     }
   };
 
-  // Пересчет пути при изменении сетки, старта или настроек
   useEffect(() => {
     if (grid.length === 0) {
-      setPathResult(null);
+      if (pathResult) setPathResult(null);
       return;
-    };
+    }
+
+    if (isDrawMode) {
+      return;
+    }
 
     const calculatePath = async () => {
       setIsCalculating(true);
@@ -141,37 +142,22 @@ export const useDungeon = () => {
         setPathResult(result);
       } catch (e) {
         console.error("Pathfinding error:", e);
-        setPathResult(null); // Сбрасываем результат при ошибке
+        setPathResult(null);
       } finally {
         setIsCalculating(false);
       }
     };
 
     calculatePath();
-  }, [grid, userStart, settings]);
+  }, [grid, userStart, settings, isDrawMode]);
 
   const handleCellClick = useCallback((p: Point) => {
-    if (!isCalculating) {
-        setUserStart(p);
-    }
-  }, [isCalculating]);
-
-  const handleCellUpdate = useCallback((p: Point, newType: number) => {
-    if (isCalculating) return;
-
-    setGrid(prev => {
-        if (prev[p.y]?.[p.x]?.f === newType) {
-            return prev;
-        }
-        const newGrid = [...prev];
-        newGrid[p.y] = [...prev[p.y]];
-        newGrid[p.y][p.x] = { ...prev[p.y][p.x], f: newType };
-        return newGrid;
-    });
-  }, [isCalculating]);
+    if (isCalculating || isDrawMode) return;
+    setUserStart(p);
+  }, [isCalculating, isDrawMode]);
 
   const handleStepClick = (stepIndex: number) => {
-    if (!pathResult || !pathResult.steps[stepIndex] || isCalculating) return;
+    if (!pathResult || !pathResult.steps[stepIndex] || isCalculating || isDrawMode) return;
 
     const newGrid = grid.map(row => row.map(cell => ({ ...cell })));
     
@@ -192,6 +178,7 @@ export const useDungeon = () => {
 
   return {
     grid,
+    setGrid,
     userStart,
     settings,
     setSettings,
@@ -200,7 +187,6 @@ export const useDungeon = () => {
     handleFileUpload,
     handleFileDownload,
     handleCellClick,
-    handleCellUpdate,
     handleStepClick,
   };
 };

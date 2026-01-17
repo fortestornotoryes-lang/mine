@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { ChevronDown, Play, Loader2, AlertCircle, RotateCcw, Target } from 'lucide-react';
-import { MINES_DICT, MineInfo } from '../../../entities/mine/model/types.ts';
+import { MINES_DICT, MineInfo } from '@/entities/mine/model/types.ts';
 
 interface MineScannerPanelProps {
   selectedMine: MineInfo;

@@ -1,4 +1,4 @@
-import { Point } from '../../../shared/types';
+import { Point } from '@/shared/types';
 
 /**
  * Настройки для поисковика пути.

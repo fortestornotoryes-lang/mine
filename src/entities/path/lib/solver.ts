@@ -1,4 +1,4 @@
-import { Point } from '../../../shared/types';
+import { Point } from '@/shared/types';
 import { CellType, RawDungeonCell } from '../../dungeon/model/types';
 import { PathfinderSettings, PathResult, PathStep } from '../model/types';
 

@@ -1,6 +1,6 @@
 
-import { CharacterParams } from '../../entities/character/model/types.ts';
-import { MineDepletionData } from '../../entities/mine/model/types.ts';
+import { CharacterParams } from '@/entities/character/model/types.ts';
+import { MineDepletionData } from '@/entities/mine/model/types.ts';
 
 /**
  * Определение типов для прокси-функций.

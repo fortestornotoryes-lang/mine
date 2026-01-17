@@ -5,8 +5,8 @@ import {
   ArrowUp, ArrowDown, Zap, BrainCircuit, Dna, Flame, Save, Target, ListOrdered,
   ChevronDown, ChevronUp, Construction
 } from 'lucide-react';
-import { Point } from '../../../shared/types';
-import { PathfinderSettings, PathResult, PathStep } from '../../../entities/path/model/types';
+import { Point } from '@/shared/types';
+import { PathfinderSettings, PathResult, PathStep } from '@/entities/path/model/types';
 
 interface ControlsProps {
   settings: PathfinderSettings;

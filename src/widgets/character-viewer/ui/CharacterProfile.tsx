@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Swords } from 'lucide-react';
-import { CharacterParams } from '../../../entities/character/model/types.ts';
+import { CharacterParams } from '@/entities/character/model/types.ts';
 
 interface CharacterProfileProps {
   names: string[];

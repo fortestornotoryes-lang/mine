@@ -13,11 +13,13 @@ const yieldToMain = () => new Promise(resolve => setTimeout(resolve, 0));
  */
 const isWalkable = (
   cellType: number,
-  settings: PathfinderSettings
+  settings: PathfinderSettings,
+  isGrateOpen: boolean = true
 ): boolean => {
   if (cellType === CellType.Empty) return false;
   if (settings.avoidTraps && cellType === CellType.Trap) return false;
   if (settings.avoidGuards && cellType === CellType.Guard) return false;
+  if (cellType === CellType.Grate && !isGrateOpen) return false;
   return true;
 };
 
@@ -44,7 +46,8 @@ const getPath = (
   grid: RawDungeonCell[][],
   start: Point,
   target: Point,
-  settings: PathfinderSettings
+  settings: PathfinderSettings,
+  isGrateOpen: boolean = true
 ): Point[] | null => {
   const rows = grid.length;
   const cols = grid[0].length;
@@ -67,7 +70,7 @@ const getPath = (
       if (!visited.has(key)) {
         const cell = grid[next.y][next.x];
         const isTarget = next.x === target.x && next.y === target.y;
-        if (isWalkable(cell.f, settings) || isTarget) {
+        if (isWalkable(cell.f, settings, isGrateOpen) || isTarget) {
           visited.add(key);
           cameFrom.set(key, current);
           queue.push(next);
@@ -94,7 +97,8 @@ const getDistancesToTargets = (
     grid: RawDungeonCell[][],
     start: Point,
     targets: Point[],
-    settings: PathfinderSettings
+    settings: PathfinderSettings,
+    isGrateOpen: boolean = true
 ): number[] => {
     const rows = grid.length;
     const cols = grid[0].length;
@@ -127,7 +131,7 @@ const getDistancesToTargets = (
                 const cell = grid[v.y][v.x];
                 const isTarget = targetMap.has(key);
                 
-                if (isWalkable(cell.f, settings) || isTarget) {
+                if (isWalkable(cell.f, settings, isGrateOpen) || isTarget) {
                     dists.set(key, d + 1);
                     queue.push(v);
                     
@@ -542,7 +546,7 @@ export const solveDungeon = async (
   if (!startPoint) {
       outer: for (let y = 0; y < rows; y++) {
           for (let x = 0; x < cols; x++) {
-              if (isWalkable(grid[y][x].f, settings)) {
+              if (isWalkable(grid[y][x].f, settings, false)) {
                   startPoint = { x, y };
                   break outer;
               }
@@ -553,21 +557,184 @@ export const solveDungeon = async (
   if (!startPoint) {
       return { isSolvable: false, path: [], totalDistance: 0, visitedObjectives: [], unreachableObjectives: [], steps: [] };
   }
+
+  // Проверка: есть ли решетки и нужны ли кнопки?
+  // По требованию: считаем, что сундук ВСЕГДА за решеткой, если на карте есть кнопки.
+  const hasButtons = buttonObjectives.length > 0;
+  const hasGrates = grid.some(row => row.some(cell => cell.f === CellType.Grate)) || hasButtons;
+
+  // 1.1 Фильтрация тупиков по отступу от пути
+  if (settings.maxDeadlockOffset !== undefined) {
+      // Кнопки всегда являются частью "базового пути", но если мы хотим 
+      // чтобы они исследовались ВМЕСТЕ с тупиками, они должны быть в одной группе TSP.
+      
+      // Сначала определим опорные точки (кнопки, сундук и выход), от которых строится основной маршрут
+      const anchorPoints: Point[] = [...buttonObjectives];
+      if (chestPoint) anchorPoints.push(chestPoint);
+      if (exitPoint) anchorPoints.push(exitPoint);
+
+      // Генерируем "базовый путь", который обязательно проходит через все кнопки, сундук и выход.
+      // Используем более надежный способ: строим пути ко всем ключевым точкам.
+      const refPathPoints = new Set<string>();
+      
+      const buildPathToAnchors = (start: Point, anchors: Point[]) => {
+          let curr = start;
+          refPathPoints.add(`${curr.x},${curr.y}`);
+          const remaining = [...anchors];
+          
+          while (remaining.length > 0) {
+              const dists = getDistancesToTargets(grid, curr, remaining, settings, true);
+              let minDist = Infinity;
+              let minIdx = -1;
+              for (let i = 0; i < dists.length; i++) {
+                  if (dists[i] < minDist) {
+                      minDist = dists[i];
+                      minIdx = i;
+                  }
+              }
+              if (minIdx === -1) break;
+              
+              const target = remaining[minIdx];
+              const path = getPath(grid, curr, target, settings, true);
+              if (path) {
+                  path.forEach(p => refPathPoints.add(`${p.x},${p.y}`));
+                  curr = target;
+              }
+              remaining.splice(minIdx, 1);
+          }
+          return curr;
+      };
+
+      // 1. Путь через все кнопки
+      let lastPos = buildPathToAnchors(startPoint, buttonObjectives);
+      
+      // 2. От последней кнопки (или старта) к сундуку
+      if (chestPoint) {
+          const pathToChest = getPath(grid, lastPos, chestPoint, settings, true);
+          if (pathToChest) {
+              pathToChest.forEach(p => refPathPoints.add(`${p.x},${p.y}`));
+              lastPos = chestPoint;
+          }
+      }
+      
+      // 3. От сундука (или того, где остановились) к выходу
+      if (exitPoint) {
+          const pathToExit = getPath(grid, lastPos, exitPoint, settings, true);
+          if (pathToExit) {
+              pathToExit.forEach(p => refPathPoints.add(`${p.x},${p.y}`));
+          }
+      }
+      
+      const parsedRefPoints = Array.from(refPathPoints).map(s => {
+          const [x, y] = s.split(',').map(Number);
+          return { x, y };
+      });
+
+      // Теперь фильтруем тупики по расстоянию до этого базового пути
+      const filterByOffset = (objectives: Point[]) => {
+          const filtered: Point[] = [];
+          for (const obj of objectives) {
+              const distsToRef = getDistancesToTargets(grid, obj, parsedRefPoints, settings, true);
+              const minDist = Math.min(...distsToRef);
+              if (minDist <= settings.maxDeadlockOffset!) {
+                  filtered.push(obj);
+              }
+          }
+          return filtered;
+      };
+
+      const filteredDeadlocks = filterByOffset(deadlockObjectives);
+
+      deadlockObjectives.length = 0;
+      deadlockObjectives.push(...filteredDeadlocks);
+  }
+
+  // 1.2 Определение "поздних" тупиков (те, что на пути от сундука к выходу)
+  const lateDeadlockObjectives: Point[] = [];
+  const earlyDeadlockObjectives: Point[] = [];
+  const buttonPriorityObjectives: Point[] = [];
+  
+  if (chestPoint && exitPoint) {
+      // Строим путь от сундука к выходу
+      const exitPath = getPath(grid, chestPoint, exitPoint, settings, true);
+      if (exitPath) {
+          const exitPathSet = new Set(exitPath.map(p => `${p.x},${p.y}`));
+          
+          for (const dl of deadlockObjectives) {
+              // Если тупик находится непосредственно на пути к выходу или ОЧЕНЬ близко (1 шаг)
+              // Мы можем использовать более широкий радиус, если нужно, но пока возьмем 1 шаг.
+              // Или даже просто проверим расстояние до любой точки этого пути.
+              const distsToExitPath = getDistancesToTargets(grid, dl, exitPath, settings, true);
+              const minDistToExitPath = Math.min(...distsToExitPath);
+              
+              // Проверяем также расстояние до сундука
+              const distToChest = getDistancesToTargets(grid, dl, [chestPoint], settings, true)[0];
+              
+              // Если тупик находится в пределах 2 шагов от пути сундук -> выход,
+              // НО при этом он находится ДАЛЬШЕ от сундука, чем от какой-то точки пути к выходу (чтобы не забирать его ДО сундука)
+              // На самом деле, если он рядом с сундуком, лучше его забрать ДО сундука, если мы идем К сундуку.
+              // А если он дальше по коридору к выходу, то ПОСЛЕ.
+              
+              if (minDistToExitPath <= 2 && distToChest > 2) { 
+                  lateDeadlockObjectives.push(dl);
+              } else {
+                  earlyDeadlockObjectives.push(dl);
+              }
+          }
+      } else {
+          earlyDeadlockObjectives.push(...deadlockObjectives);
+      }
+  } else {
+      earlyDeadlockObjectives.push(...deadlockObjectives);
+  }
+
+  // 1.3 Поиск тупиков, которые ОЧЕНЬ близко к кнопкам
+  if (buttonObjectives.length > 0 && earlyDeadlockObjectives.length > 0) {
+      const earlyDLs = [...earlyDeadlockObjectives];
+      earlyDeadlockObjectives.length = 0;
+      
+      for (const dl of earlyDLs) {
+          const distsToButtons = getDistancesToTargets(grid, dl, buttonObjectives, settings, true);
+          const minDist = Math.min(...distsToButtons);
+          // Если тупик находится в пределах 2 шагов от любой кнопки, 
+          // он пойдет в группу к кнопкам даже если приоритет раздельный (если решеток нет).
+          // А если решетки есть, они и так в одной группе.
+          if (minDist <= 2) {
+              buttonPriorityObjectives.push(dl);
+          } else {
+              earlyDeadlockObjectives.push(dl);
+          }
+      }
+  }
   
   // 2. Группировка целей в зависимости от приоритета
   let objectiveGroups: Point[][] = [];
 
-  if (settings.objectivePriority === 'buttons_first') {
-      if (buttonObjectives.length > 0) objectiveGroups.push(buttonObjectives);
-      if (deadlockObjectives.length > 0) objectiveGroups.push(deadlockObjectives);
-  } else if (settings.objectivePriority === 'deadlocks_first') {
-      if (deadlockObjectives.length > 0) objectiveGroups.push(deadlockObjectives);
-      if (buttonObjectives.length > 0) objectiveGroups.push(buttonObjectives);
+  // Фаза 1: Кнопки и связанные с ними тупики
+  if (hasButtons) {
+      // Если есть кнопки, мы ДОЛЖНЫ их нажать (так как сундук заблокирован).
+      // Исследуем их вместе со ВСЕМИ ранними тупиками.
+      const combined = [...buttonObjectives, ...buttonPriorityObjectives, ...earlyDeadlockObjectives];
+      if (combined.length > 0) objectiveGroups.push(combined);
   } else {
-      // Mixed
-      const allObjs = [...buttonObjectives, ...deadlockObjectives];
-      if (allObjs.length > 0) objectiveGroups.push(allObjs);
+      // Решеток нет, обычная логика приоритетов
+      const buttonGroup = [...buttonObjectives, ...buttonPriorityObjectives];
+
+      if (settings.objectivePriority === 'buttons_first') {
+          if (buttonGroup.length > 0) objectiveGroups.push(buttonGroup);
+          if (earlyDeadlockObjectives.length > 0) objectiveGroups.push(earlyDeadlockObjectives);
+      } else if (settings.objectivePriority === 'deadlocks_first') {
+          if (earlyDeadlockObjectives.length > 0) objectiveGroups.push(earlyDeadlockObjectives);
+          if (buttonGroup.length > 0) objectiveGroups.push(buttonGroup);
+      } else {
+          const combined = [...buttonGroup, ...earlyDeadlockObjectives];
+          if (combined.length > 0) objectiveGroups.push(combined);
+      }
   }
+
+  // Фаза 2: Сундук (будет добавлен отдельно в цикле или как спец. группа)
+  // В текущей реализации сундук идет после всех групп из objectiveGroups.
+  // Нам нужно вставить поздние тупики МЕЖДУ сундуком и выходом.
 
   const fullPath: Point[] = [];
   const steps: PathStep[] = [];
@@ -575,12 +742,19 @@ export const solveDungeon = async (
   const allUnreachableObjectives: Point[] = [];
   
   let currentPos = startPoint;
+  let gratesOpened = !hasButtons; // Решетки открыты, если кнопок нет изначально
 
-  // 3. Последовательное решение для каждой группы целей
-  for (const group of objectiveGroups) {
+  // 3. Последовательное решение для каждой группы целей (Кнопки + Ранние тупики)
+  for (let gIdx = 0; gIdx < objectiveGroups.length; gIdx++) {
+      const group = objectiveGroups[gIdx];
+      
+      // Проверяем, есть ли в этой группе кнопки. 
+      // Если мы закончим группу, в которой были кнопки, нужно открыть решетки.
+      const groupHasButtons = group.some(p => grid[p.y][p.x].f === CellType.Button);
+
       // 3.1 Фильтрация достижимых целей в текущей группе
       const reachableInGroup: Point[] = [];
-      const distsFromCurrent = getDistancesToTargets(grid, currentPos, group, settings);
+      const distsFromCurrent = getDistancesToTargets(grid, currentPos, group, settings, gratesOpened);
       
       const groupIndices: number[] = [];
       
@@ -600,10 +774,6 @@ export const solveDungeon = async (
       const distMatrix: number[][] = Array(n).fill(0).map(() => Array(n).fill(0));
       // Расстояния от текущей позиции до целей
       const startToObjs = groupIndices.map(i => distsFromCurrent[i]);
-      // Расстояния от целей до "следующей точки".
-      // Если это не последняя группа, следующей точкой будет "неважно" (0), так как мы просто хотим закончить группу.
-      // Но глобально мы хотим закончить группу так, чтобы быть ближе к сундуку или выходу.
-      // Упрощение: считаем стоимость до сундука (если есть и достижим) или до выхода.
       
       const objsToNext = Array(n).fill(0);
       let nextTarget = chestPoint || exitPoint;
@@ -611,20 +781,20 @@ export const solveDungeon = async (
       // Проверяем достижимость следующей глобальной цели (сундук или выход)
       let nextTargetReachable = false;
       if (nextTarget) {
-           const d = getDistancesToTargets(grid, currentPos, [nextTarget], settings)[0];
+           const d = getDistancesToTargets(grid, currentPos, [nextTarget], settings, gratesOpened)[0];
            if (d !== Infinity) nextTargetReachable = true;
       }
       
       for (let i = 0; i < n; i++) {
         if (i % 20 === 0) await yieldToMain();
 
-        const dists = getDistancesToTargets(grid, reachableInGroup[i], reachableInGroup, settings);
+        const dists = getDistancesToTargets(grid, reachableInGroup[i], reachableInGroup, settings, gratesOpened);
         for (let j = 0; j < n; j++) {
             distMatrix[i][j] = dists[j];
         }
 
         if (nextTarget && nextTargetReachable) {
-             const d = getDistancesToTargets(grid, reachableInGroup[i], [nextTarget], settings)[0];
+             const d = getDistancesToTargets(grid, reachableInGroup[i], [nextTarget], settings, gratesOpened)[0];
              objsToNext[i] = d;
         } else {
              objsToNext[i] = 0;
@@ -660,7 +830,7 @@ export const solveDungeon = async (
       // 3.4 Реконструкция пути для группы
       for (const idx of orderIndices) {
           const target = reachableInGroup[idx];
-          const path = getPath(grid, currentPos, target, settings);
+          const path = getPath(grid, currentPos, target, settings, gratesOpened);
           if (path) {
               const seg = fullPath.length === 0 ? path : path.slice(1);
               fullPath.push(...seg);
@@ -670,11 +840,23 @@ export const solveDungeon = async (
               allVisitedObjectives.push(target);
           }
       }
+
+      // Если в этой группе были кнопки, проверяем, не пора ли открыть решетки.
+      // Мы открываем их, если ВСЕ кнопки нажаты.
+      if (groupHasButtons) {
+          const remainingButtons = buttonObjectives.filter(b => 
+              !allVisitedObjectives.some(v => v.x === b.x && v.y === b.y) &&
+              !allUnreachableObjectives.some(u => u.x === b.x && u.y === b.y)
+          );
+          if (remainingButtons.length === 0) {
+              gratesOpened = true;
+          }
+      }
   }
 
   // 4. Сундук
   if (chestPoint) {
-      const path = getPath(grid, currentPos, chestPoint, settings);
+      const path = getPath(grid, currentPos, chestPoint, settings, gratesOpened);
       if (path) {
           const seg = fullPath.length === 0 ? path : path.slice(1);
           fullPath.push(...seg);
@@ -685,9 +867,65 @@ export const solveDungeon = async (
       }
   }
 
+  // 5. Поздние тупики (те, что у выхода)
+  if (lateDeadlockObjectives.length > 0) {
+      const reachableLate: Point[] = [];
+      const distsFromCurrent = getDistancesToTargets(grid, currentPos, lateDeadlockObjectives, settings, gratesOpened);
+      const lateIndices: number[] = [];
+      
+      distsFromCurrent.forEach((d, i) => {
+          if (d === Infinity) {
+              allUnreachableObjectives.push(lateDeadlockObjectives[i]);
+          } else {
+              reachableLate.push(lateDeadlockObjectives[i]);
+              lateIndices.push(i);
+          }
+      });
+      
+      const nLate = reachableLate.length;
+      if (nLate > 0) {
+          const distMatrixLate = Array(nLate).fill(0).map(() => Array(nLate).fill(0));
+          const startToObjsLate = lateIndices.map(i => distsFromCurrent[i]);
+          const objsToExitLate = Array(nLate).fill(0);
+          
+          let exitReachable = false;
+          if (exitPoint) {
+              const d = getDistancesToTargets(grid, currentPos, [exitPoint], settings, gratesOpened)[0];
+              if (d !== Infinity) exitReachable = true;
+          }
+          
+          for (let i = 0; i < nLate; i++) {
+              if (i % 20 === 0) await yieldToMain();
+              const dists = getDistancesToTargets(grid, reachableLate[i], reachableLate, settings, gratesOpened);
+              for (let j = 0; j < nLate; j++) distMatrixLate[i][j] = dists[j];
+              
+              if (exitPoint && exitReachable) {
+                  objsToExitLate[i] = getDistancesToTargets(grid, reachableLate[i], [exitPoint], settings, gratesOpened)[0];
+              }
+          }
+          
+          let orderLate: number[] = [];
+          // Используем жадный алгоритм для поздних тупиков (обычно их мало)
+          const rawLate = solveTspGreedy(distMatrixLate, startToObjsLate, objsToExitLate);
+          orderLate = await optimize2OptAsync(rawLate, distMatrixLate, startToObjsLate, objsToExitLate);
+          
+          for (const idx of orderLate) {
+              const target = reachableLate[idx];
+              const path = getPath(grid, currentPos, target, settings, gratesOpened);
+              if (path) {
+                  const seg = fullPath.length === 0 ? path : path.slice(1);
+                  fullPath.push(...seg);
+                  steps.push({ from: currentPos, to: target, pathSegment: path, action: 'explore' });
+                  currentPos = target;
+                  allVisitedObjectives.push(target);
+              }
+          }
+      }
+  }
+
   // 5. Выход
   if (exitPoint) {
-      const path = getPath(grid, currentPos, exitPoint, settings);
+      const path = getPath(grid, currentPos, exitPoint, settings, gratesOpened);
       if (path) {
           const seg = fullPath.length === 0 ? path : path.slice(1);
           fullPath.push(...seg);

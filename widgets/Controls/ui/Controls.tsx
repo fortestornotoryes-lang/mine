@@ -3,7 +3,7 @@ import {
   Settings, Upload, Map as MapIcon, PlayCircle, AlertTriangle, 
   Footprints, MousePointerClick, MapPin, Box, LogOut, ArrowRight,
   ArrowUp, ArrowDown, Zap, BrainCircuit, Dna, Flame, Save, Target, ListOrdered,
-  ChevronDown, ChevronUp
+  ChevronDown, ChevronUp, Construction
 } from 'lucide-react';
 import { Point } from '../../../shared/types';
 import { PathfinderSettings, PathResult, PathStep } from '../../../entities/path/model/types';
@@ -145,6 +145,37 @@ export const Controls: React.FC<ControlsProps> = ({
                 />
                 <span className="text-sm text-slate-200">Избегать охраны</span>
                 </label>
+            </div>
+
+            {/* Максимальный отступ тупиков */}
+            <div className="bg-slate-700/30 p-2 rounded-lg border border-slate-700/50">
+                <div className="text-[10px] text-slate-400 mb-1 font-semibold uppercase flex items-center gap-1">
+                    <Construction size={10} /> Макс. отступ тупиков
+                </div>
+                <div className="flex items-center gap-2">
+                    <input
+                        type="number"
+                        min="0"
+                        placeholder="Все"
+                        value={settings.maxDeadlockOffset ?? ''}
+                        onChange={(e) => {
+                            const val = e.target.value === '' ? undefined : parseInt(e.target.value);
+                            setSettings(prev => ({ ...prev, maxDeadlockOffset: val }));
+                        }}
+                        className="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 transition-colors"
+                    />
+                    {settings.maxDeadlockOffset !== undefined && (
+                        <button 
+                            onClick={() => setSettings(prev => ({ ...prev, maxDeadlockOffset: undefined }))}
+                            className="text-[10px] text-slate-500 hover:text-slate-300 transition-colors px-1"
+                        >
+                            Сброс
+                        </button>
+                    )}
+                </div>
+                <p className="text-[9px] text-slate-500 mt-1 leading-tight">
+                    Игнорировать тупики дальше N шагов от основного пути. Пусто — лутать всё.
+                </p>
             </div>
             
             {/* Выбор приоритета */}

@@ -9,6 +9,7 @@ export interface PathfinderSettings {
   algorithm: 'greedy' | 'optimal' | 'genetic' | 'simulated_annealing'; // Алгоритм поиска
   exitMode: 'stairs_up' | 'stairs_down'; // Какую лестницу считать выходом
   objectivePriority: 'mixed' | 'buttons_first' | 'deadlocks_first'; // Приоритет целей
+  maxDeadlockOffset?: number; // Максимальный отступ тупика от пути (в шагах)
 }
 
 /**

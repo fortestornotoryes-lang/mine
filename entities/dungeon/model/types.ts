@@ -14,6 +14,7 @@ export enum CellType {
   Trap = 22,
   Guard = 100,
   ButtonPressed = 106,
+  Grate = 11,
 }
 
 /**

@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { ZoomIn, ZoomOut, Maximize, Eye, EyeOff, AlertTriangle, Grid, SlidersHorizontal, PenTool, MousePointer2, Eraser, HelpCircle, ArrowUp, ArrowDown, MapPin, Box, Skull, ShieldAlert } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize, Eye, EyeOff, AlertTriangle, Grid, SlidersHorizontal, PenTool, MousePointer2, Eraser, HelpCircle, ArrowUp, ArrowDown, MapPin, Box, Skull, ShieldAlert, Grid3x3 } from 'lucide-react';
 import { Point } from '../../../shared/types';
 import { RawDungeonCell, CellType } from '../../../entities/dungeon/model/types';
 import { CELL_CONFIG } from '../../../entities/dungeon/config';
@@ -13,6 +13,7 @@ interface DungeonViewerProps {
   onCellClick: (p: Point) => void;
   onCellUpdate: (p: Point, type: number) => void;
   hoveredStepIndex: number | null;
+  nextTarget?: Point | null;
 }
 
 const LegendItem = ({ label, color, icon }: { label: string, color: string, icon: React.ReactNode }) => (
@@ -32,7 +33,8 @@ export const DungeonViewer: React.FC<DungeonViewerProps> = ({
   startPoint, 
   onCellClick,
   onCellUpdate,
-  hoveredStepIndex
+  hoveredStepIndex,
+  nextTarget
 }) => {
   // Состояние для Viewport (Зум/Пан)
   const [transform, setTransform] = useState({ scale: 1, x: 0, y: 0 });
@@ -327,6 +329,7 @@ export const DungeonViewer: React.FC<DungeonViewerProps> = ({
                <LegendItem color="bg-yellow-500" icon={<Box size={14} />} label="Сундук" />
                <LegendItem color="bg-orange-600" icon={<Skull size={14} />} label="Ловушка" />
                <LegendItem color="bg-rose-900" icon={<ShieldAlert size={14} />} label="Охранник" />
+               <LegendItem color="bg-slate-800" icon={<Grid3x3 size={14} className="text-slate-400" />} label="Решетка" />
                <LegendItem color="bg-slate-700" icon={null} label="Дорога" />
                <LegendItem color="bg-slate-900" icon={null} label="Стена" />
             </div>
@@ -377,8 +380,16 @@ export const DungeonViewer: React.FC<DungeonViewerProps> = ({
                 {grid.map((row, y) => (
                 row.map((cell, x) => {
                     const isStart = startPoint?.x === x && startPoint?.y === y;
+                    const isNextTarget = nextTarget?.x === x && nextTarget?.y === y;
                     const config = CELL_CONFIG[cell.f] || CELL_CONFIG[CellType.Empty];
                     const isUnreachable = pathResult?.unreachableObjectives.some(u => u.x === x && u.y === y);
+                    
+                    // Решетка открыта, если в текущей сетке нет активных (ненажатых) кнопок
+                    const activeButtons = grid.flat().filter(c => c.f === CellType.Button);
+                    const isGrateOpen = activeButtons.length === 0;
+                    
+                    // Сундук считается закрытым, если есть активные кнопки (имитируем решетку перед ним)
+                    const isChestLocked = cell.f === CellType.Chest && activeButtons.length > 0;
                     
                     return (
                     <div
@@ -394,18 +405,26 @@ export const DungeonViewer: React.FC<DungeonViewerProps> = ({
                         title={`[${x},${y}] ${config.label}`}
                         className={`
                             flex items-center justify-center
-                            rounded-sm transition-colors duration-150
+                            rounded-sm transition-all duration-200
                             ${isStart ? 'ring-2 ring-white z-10' : ''}
+                            ${isNextTarget ? 'ring-2 ring-yellow-400 ring-offset-2 ring-offset-slate-900 z-20 shadow-lg shadow-yellow-500/30' : ''}
                             ${isUnreachable ? 'ring-2 ring-red-500 ring-offset-2 ring-offset-slate-900 z-10' : ''}
                             ${config.color}
                             ${isEditMode ? 'hover:brightness-125' : 'hover:brightness-110'}
+                            ${isChestLocked ? 'opacity-50' : ''}
                             relative
                         `}
                         style={{ width: cellSize, height: cellSize }}
                     >
                         <div style={{ transform: `scale(${Math.max(0.5, cellSize / 24)})` }}>
-                            <CellIcon type={cell.f} className="text-white/90" />
+                            <CellIcon type={cell.f} className="text-white/90" isGrateOpen={isGrateOpen} isNextTarget={isNextTarget} />
                         </div>
+                        
+                        {isChestLocked && (
+                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                 <Grid3x3 size={cellSize * 0.6} className="text-slate-400 opacity-60" />
+                             </div>
+                        )}
                         
                         {isUnreachable && !isEditMode && (
                             <div className="absolute -top-1 -right-1 bg-slate-900 rounded-full scale-75">

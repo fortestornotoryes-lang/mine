@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useLayoutEffect } from 'react';
 import { ZoomIn, ZoomOut, Maximize, Eye, EyeOff, AlertTriangle, Grid, SlidersHorizontal, PenTool, MousePointer2, Eraser, HelpCircle, ArrowUp, ArrowDown, MapPin, Box, Skull, ShieldAlert, Grid3x3, Check, X } from 'lucide-react';
 import { Point } from '@/shared/types';
 import { RawDungeonCell, CellType } from '@/entities/dungeon/model/types';
@@ -8,7 +8,7 @@ import { PathResult }  from "@/entities/path/model/types.ts";
 
 interface DungeonViewerProps {
   grid: RawDungeonCell[][];
-  setGrid: (grid: RawDungeonCell[][]) => void;
+  setGrid: React.Dispatch<React.SetStateAction<RawDungeonCell[][]>>;
   pathResult: PathResult | null;
   startPoint: Point | null;
   onCellClick: (p: Point) => void;
@@ -153,7 +153,34 @@ export const DungeonViewer: React.FC<DungeonViewerProps> = ({
       onCellClick(p);
   };
 
-  const resetView = () => setTransform({ scale: 1, x: 0, y: 0 });
+  const fitToScreen = () => {
+    if (!containerRef.current || rows === 0 || cols === 0) {
+      setTransform({ scale: 1, x: 0, y: 0 });
+      return;
+    }
+
+    const container = containerRef.current;
+    const { clientWidth: containerWidth, clientHeight: containerHeight } = container;
+
+    if (containerWidth === 0 || containerHeight === 0) return;
+
+    const gridPadding = 32; // p-4 on grid container
+    const gridWidth = cols * cellSize + (cols > 0 ? (cols - 1) * gap : 0) + gridPadding;
+    const gridHeight = rows * cellSize + (rows > 0 ? (rows - 1) * gap : 0) + gridPadding;
+
+    if (gridWidth <= 0 || gridHeight <= 0) return;
+
+    const scaleX = containerWidth / gridWidth;
+    const scaleY = containerHeight / gridHeight;
+    
+    const newScale = Math.min(scaleX, scaleY) * 0.95; // 95% to leave a small margin
+
+    setTransform({
+      scale: Math.min(Math.max(0.1, newScale), 5), // Clamp scale
+      x: 0,
+      y: 0,
+    });
+  };
 
   const handleCellContextMenu = (e: React.MouseEvent, p: Point) => {
     if (isPainting) return; 
@@ -174,6 +201,10 @@ export const DungeonViewer: React.FC<DungeonViewerProps> = ({
     if (contextMenu) window.addEventListener('click', closeMenu);
     return () => window.removeEventListener('click', closeMenu);
   }, [contextMenu]);
+
+  useLayoutEffect(() => {
+    fitToScreen();
+  }, [rows, cols, cellSize, gap]);
 
   const getPointsPathD = (points: Point[]) => {
      if (!points || points.length === 0) return '';
@@ -199,7 +230,7 @@ export const DungeonViewer: React.FC<DungeonViewerProps> = ({
 
             <button onClick={() => setTransform(p => ({ ...p, scale: Math.min(p.scale + 0.2, 5) }))} className="p-2 hover:bg-slate-700 rounded text-slate-300 hover:text-white transition-colors" title="Приблизить"><ZoomIn size={18} /></button>
             <button onClick={() => setTransform(p => ({ ...p, scale: Math.max(p.scale - 0.2, 0.1) }))} className="p-2 hover:bg-slate-700 rounded text-slate-300 hover:text-white transition-colors" title="Отдалить"><ZoomOut size={18} /></button>
-            <button onClick={resetView} className="p-2 hover:bg-slate-700 rounded text-slate-300 hover:text-white transition-colors" title="Сбросить вид"><Maximize size={18} /></button>
+            <button onClick={fitToScreen} className="p-2 hover:bg-slate-700 rounded text-slate-300 hover:text-white transition-colors" title="Вписать в экран"><Maximize size={18} /></button>
             <div className="h-px bg-slate-700 my-1" />
             <button onClick={() => setShowPathDetails(!showPathDetails)} className={`p-2 rounded transition-colors ${showPathDetails ? 'text-blue-400 bg-slate-700/50' : 'text-slate-400 hover:bg-slate-700 hover:text-white'}`} title="Показать/Скрыть детали пути">{showPathDetails ? <Eye size={18} /> : <EyeOff size={18} />}</button>
             <button onClick={() => setShowViewSettings(!showViewSettings)} className={`p-2 rounded transition-colors ${showViewSettings ? 'text-blue-400 bg-slate-700/50' : 'text-slate-400 hover:bg-slate-700 hover:text-white'}`} title="Настройки сетки"><SlidersHorizontal size={18} /></button>
@@ -328,19 +359,24 @@ export const DungeonViewer: React.FC<DungeonViewerProps> = ({
                     {pathResult.steps.map((step, index) => {
                         const isHovered = hoveredStepIndex === index;
                         const isAnyHovered = hoveredStepIndex !== null;
+                        const isNextStep = index === 0;
+                        const isHighlighted = isHovered || (hoveredStepIndex === null && isNextStep);
+                        
                         const showDetails = showPathDetails;
-                        const opacity = isHovered ? 1 : (isAnyHovered ? 0.1 : 0.8);
-                        const strokeColor = isHovered ? "#facc15" : "#38bdf8"; 
-                        const baseStrokeWidth = Math.max(1, cellSize / 8); 
-                        const strokeWidth = isHovered ? baseStrokeWidth * 2 : (showDetails ? baseStrokeWidth * 1.5 : baseStrokeWidth);
-                        const zIndex = isHovered ? 100 : 1;
+                        const opacity = isHighlighted ? 1 : (isAnyHovered ? 0.1 : 0.8);
+                        const strokeColor = isHighlighted ? "#facc15" : "#38bdf8";
+                        const baseStrokeWidth = Math.max(1, cellSize / 8);
+                        const strokeWidth = isHighlighted ? baseStrokeWidth * 2 : (showDetails ? baseStrokeWidth * 1.5 : baseStrokeWidth);
+                        const zIndex = isHighlighted ? 100 : 1;
                         const d = getPointsPathD(step.pathSegment);
+                        const markerId = isHighlighted ? "url(#arrowhead-highlight)" : "url(#arrowhead-blue)";
+                        const showMarker = showDetails || isHighlighted;
 
                         return (
                             <g key={index} style={{ opacity, transition: 'opacity 0.2s', zIndex }}>
-                                {(showDetails || isHovered) && (<path d={d} fill="none" stroke="#0f172a" strokeWidth={strokeWidth + baseStrokeWidth} strokeLinecap="round" strokeLinejoin="round" className="opacity-70" />)}
-                                <path d={d} fill="none" stroke={strokeColor} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" markerEnd={isHovered || showDetails ? (isHovered ? "url(#arrowhead-highlight)" : "url(#arrowhead-blue)") : undefined} />
-                                {(showDetails && (!isAnyHovered || isHovered)) && (<path d={d} fill="none" stroke="white" strokeWidth={isHovered ? 2 : 1} strokeLinecap="round" strokeLinejoin="round" strokeDasharray={`${baseStrokeWidth * 2} ${baseStrokeWidth * 4}`} className="opacity-40" style={{ animation: 'flow 1s linear infinite' }} />)}
+                                {(showDetails || isHighlighted) && (<path d={d} fill="none" stroke="#0f172a" strokeWidth={strokeWidth + baseStrokeWidth} strokeLinecap="round" strokeLinejoin="round" className="opacity-70" />)}
+                                <path d={d} fill="none" stroke={strokeColor} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" markerEnd={showMarker ? markerId : undefined} />
+                                {(showDetails && (!isAnyHovered || isHighlighted)) && (<path d={d} fill="none" stroke="white" strokeWidth={isHighlighted ? 2 : 1} strokeLinecap="round" strokeLinejoin="round" strokeDasharray={`${baseStrokeWidth * 2} ${baseStrokeWidth * 4}`} className="opacity-40" style={{ animation: 'flow 1s linear infinite' }} />)}
                             </g>
                         );
                     })}

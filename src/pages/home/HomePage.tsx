@@ -1,19 +1,22 @@
 
-import { DungeonPage }                from "@/widgets/DungeonViewer/ui/DungeonPage.tsx";
+import { DungeonPage } from "@/widgets/DungeonViewer/ui/DungeonPage.tsx";
 import React, { useEffect, useState } from "react";
-import { motion, AnimatePresence }    from 'motion/react';
-import { CharacterViewer }                                 from '@/widgets/character-viewer/ui/CharacterViewer.tsx';
-import { MineViewer }                                      from '@/widgets/mine-viewer/ui/MineViewer.tsx';
-import { ShieldCheck, Pickaxe, Users, Database, Activity } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { CharacterViewer } from '@/widgets/character-viewer/ui/CharacterViewer.tsx';
+import { MineViewer } from '@/widgets/mine-viewer/ui/MineViewer.tsx';
+import { Pickaxe, Users } from 'lucide-react';
 
 type TabType = 'mines' | 'characters' | 'dungeon';
 
 export const HomePage: React.FC = () => {
-  const activeTabState = useState<TabType>('mines');
-  const activeTab = activeTabState[0];
-  const setActiveTab = activeTabState[1];
+  const [activeTab, setActiveTab] = useState<TabType>(() => {
+    const savedTab = localStorage.getItem('activeChaosageTab') as TabType;
+    return savedTab && ['mines', 'characters', 'dungeon'].includes(savedTab) ? savedTab : 'mines';
+  });
 
   useEffect(() => {
+    localStorage.setItem('activeChaosageTab', activeTab);
+
     if (activeTab === 'dungeon') {
       document.body.style.overflow = 'hidden';
     } else {
@@ -24,14 +27,16 @@ export const HomePage: React.FC = () => {
     };
   }, [activeTab]);
 
+  const navButtonClasses = "flex items-center justify-center gap-3 w-full sm:w-auto px-8 py-3 sm:px-10 rounded-full text-xs sm:text-[10px] font-black uppercase tracking-widest sm:tracking-[0.2em] transition-colors duration-500 relative z-10 group";
+
   return (
     <div className={`flex flex-col mx-auto px-4 py-2 ${activeTab === 'dungeon' ? 'h-screen w-screen max-w-none' : 'flex-1 w-full max-w-7xl'}`}>
       {/* Навигация с анимированным фоном (layoutId) */}
       <div className="flex-none flex justify-center mb-2">
-        <nav className="flex p-1.5 bg-[#0a0c10]/80 backdrop-blur-3xl rounded-[2rem] border border-slate-800/50 shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative overflow-hidden">
+        <nav className="flex flex-col sm:flex-row p-1.5 bg-[#0a0c10]/80 backdrop-blur-3xl rounded-[2rem] border border-slate-800/50 shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative overflow-hidden">
           <button
             onClick={() => setActiveTab('mines')}
-            className={`flex items-center gap-3 px-10 py-3 rounded-[1.8rem] text-[10px] font-black uppercase tracking-[0.2em] transition-colors duration-500 relative z-10 group ${
+            className={`${navButtonClasses} ${
               activeTab === 'mines' ? 'text-white' : 'text-slate-500 hover:text-slate-300'
             }`}
           >
@@ -39,7 +44,7 @@ export const HomePage: React.FC = () => {
               <motion.div 
                 layoutId="nav-bg"
                 className="absolute inset-0 bg-blue-600 shadow-[0_0_20px_rgba(37,99,235,0.4)]"
-                style={{ borderRadius: '1.8rem' }}
+                style={{ borderRadius: '9999px' }}
                 transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
               />
             )}
@@ -49,7 +54,7 @@ export const HomePage: React.FC = () => {
           
           <button
             onClick={() => setActiveTab('characters')}
-            className={`flex items-center gap-3 px-10 py-3 rounded-[1.8rem] text-[10px] font-black uppercase tracking-[0.2em] transition-colors duration-500 relative z-10 group ${
+            className={`${navButtonClasses} ${
               activeTab === 'characters' ? 'text-white' : 'text-slate-500 hover:text-slate-300'
             }`}
           >
@@ -57,7 +62,7 @@ export const HomePage: React.FC = () => {
               <motion.div 
                 layoutId="nav-bg"
                 className="absolute inset-0 bg-indigo-600 shadow-[0_0_20px_rgba(79,70,229,0.4)]"
-                style={{ borderRadius: '1.8rem' }}
+                style={{ borderRadius: '9999px' }}
                 transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
               />
             )}
@@ -66,7 +71,7 @@ export const HomePage: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveTab('dungeon')}
-            className={`flex items-center gap-3 px-10 py-3 rounded-[1.8rem] text-[10px] font-black uppercase tracking-[0.2em] transition-colors duration-500 relative z-10 group ${
+            className={`${navButtonClasses} ${
               activeTab === 'dungeon' ? 'text-white' : 'text-slate-500 hover:text-slate-300'
             }`}
           >
@@ -74,7 +79,7 @@ export const HomePage: React.FC = () => {
               <motion.div
                 layoutId="nav-bg"
                 className="absolute inset-0 bg-indigo-600 shadow-[0_0_20px_rgba(79,70,229,0.4)]"
-                style={{ borderRadius: '1.8rem' }}
+                style={{ borderRadius: '9999px' }}
                 transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
               />
             )}

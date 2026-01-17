@@ -16,9 +16,7 @@ export const Header: React.FC = () => {
             <p className="text-xs text-gray-400 font-medium">Мониторинг истощения ресурсов</p>
           </div>
         </div>
-        <div className="hidden md:block text-xs text-gray-500 italic">
-          v2.5 // Powered by Gemini Flash
-        </div>
+
       </div>
     </header>
   );

@@ -70,6 +70,22 @@ export const useMineScanner = () => {
     const removeLevel = (lvl: number) =>
         setResults(prev => prev.filter(r => r.level !== lvl));
 
+    // Открывает карточки этажей с данными из файлов (карты, загруженные с компьютера)
+    const loadLevels = useCallback((floors: { level: number; data?: LevelResult['data'] }[], replace = false) => {
+        setResults(prev => {
+            const base = replace ? [] : [...prev];
+            for (const floor of floors) {
+                const idx = base.findIndex(r => r.level === floor.level);
+                if (idx >= 0) {
+                    base[idx] = { level: floor.level, data: floor.data ?? base[idx].data };
+                } else {
+                    base.push({ level: floor.level, data: floor.data ?? ({} as LevelResult['data']) });
+                }
+            }
+            return base.sort((a, b) => a.level - b.level);
+        });
+    }, []);
+
     const reset = useCallback(() => {
         setConfig(initialConfig);
         setResults([]);
@@ -77,8 +93,9 @@ export const useMineScanner = () => {
         storage.remove(STORAGE_KEY);
     }, []);
 
-    const startScan = async () => {
-        if (config.selectedFloors.length === 0) {
+    const startScan = async (floorsOverride?: number[]) => {
+        const floors = Array.isArray(floorsOverride) ? floorsOverride : config.selectedFloors;
+        if (floors.length === 0) {
             setError("Выберите хотя бы один этаж");
             return;
         }
@@ -87,7 +104,7 @@ export const useMineScanner = () => {
         setError(null);
 
         try {
-            const promises = config.selectedFloors.map(async (level) => {
+            const promises = floors.map(async (level) => {
                 try {
                     const data = await ChaosApiService.getMineDepletion(config.selectedMine.id, level);
                     return { level, data } as LevelResult;
@@ -110,6 +127,16 @@ export const useMineScanner = () => {
         }
     };
 
+    // Сканирует все возможные этажи выбранной шахты
+    const scanAllFloors = () => {
+        const allFloors = Array.from(
+            { length: config.selectedMine.maxLevel || 40 },
+            (_, i) => i + 1
+        );
+        updateConfig({ selectedFloors: allFloors });
+        return startScan(allFloors);
+    };
+
     return {
         ...config,
         results,
@@ -119,9 +146,11 @@ export const useMineScanner = () => {
         setSelectedMine: (mine: MineInfo) => updateConfig({ selectedMine: mine }),
         toggleFloor,
         removeLevel,
+        loadLevels,
         toggleFilter,
         toggleCollapse,
         startScan,
+        scanAllFloors,
         reset
     };
 };

@@ -6,8 +6,9 @@ import { MineData } from '../types';
  * Если один упадет или будет тормозить, попробуем другой.
  */
 const PROXY_LIST = [
-  (url: string) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+  (url: string) => `https://cors-get-proxy.sirjosh.workers.dev/?url=${encodeURIComponent(url)}`,
   (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+  (url: string) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
 ];
 
 /**
@@ -31,9 +32,8 @@ export async function fetchMineData(mineId: number, level: number): Promise<Mine
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 8000); // Таймаут 8 секунд
 
-        const response = await fetch(proxyUrl, { 
-          signal: controller.signal,
-          headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
+        const response = await fetch(proxyUrl, {
+          signal: controller.signal
         });
         
         clearTimeout(timeoutId);

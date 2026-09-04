@@ -2,7 +2,7 @@ import { CharacterParams } from "@/entities/character/model/types";
 import { ProgressBar }     from "@/entities/character/ui/ProgressBar";
 import { StatRow }         from "@/entities/character/ui/StatRow";
 import { SearchForm }      from "@/features/search-character/ui/SearchForm";
-import { Card }            from "@/shared/ui/Card";
+import { Card, type AccentKey } from "@/shared/ui/Card";
 import { motion }          from "framer-motion";
 import {
     Activity,
@@ -30,6 +30,8 @@ import {
 } from "lucide-react";
 import React, { useMemo }  from "react";
 
+import { useTilt }            from "@/shared/lib/useTilt";
+
 import { useCharacterSearch } from "../model/useCharacterSearch";
 import { CharacterProfile }   from "./CharacterProfile";
 
@@ -53,9 +55,11 @@ interface StatConfig {
     valueFormatter?: (v: string) => string;     // Если нужно просто изменить одно значение (напр. % или фактор)
 }
 
-const STAT_GROUPS: { title: string; color: string; textColor: string; stats: StatConfig[] }[] = [
+const STAT_GROUPS: { title: string; accent: AccentKey; icon: React.ReactNode; color: string; textColor: string; stats: StatConfig[] }[] = [
     {
         title:     "Атака",
+        accent:    "orange",
+        icon:      <Sword />,
         color:     "border-orange-500/50",
         textColor: "text-orange-700",
         stats:     [
@@ -135,6 +139,8 @@ const STAT_GROUPS: { title: string; color: string; textColor: string; stats: Sta
     },
     {
         title:     "Защита",
+        accent:    "emerald",
+        icon:      <ShieldCheck />,
         color:     "border-emerald-500/50",
         textColor: "text-emerald-700",
 
@@ -231,6 +237,8 @@ const STAT_GROUPS: { title: string; color: string; textColor: string; stats: Sta
     },
     {
         title:     "Магия",
+        accent:    "red",
+        icon:      <Flame />,
         color:     "border-red-500/50",
         textColor: "text-red-700",
 
@@ -244,6 +252,8 @@ const STAT_GROUPS: { title: string; color: string; textColor: string; stats: Sta
     },
     {
         title:     "Сохранение маны",
+        accent:    "blue",
+        icon:      <Droplets />,
         color:     "border-blue-500/50",
         textColor: "text-blue-700",
 
@@ -263,6 +273,8 @@ const STAT_GROUPS: { title: string; color: string; textColor: string; stats: Sta
     },
     {
         title:     "Алхимия",
+        accent:    "amber",
+        icon:      <FlaskConical />,
         color:     "border-amber-500/50",
         textColor: "text-amber-700",
 
@@ -299,6 +311,8 @@ const STAT_GROUPS: { title: string; color: string; textColor: string; stats: Sta
     },
     {
         title:     "Призыв",
+        accent:    "purple",
+        icon:      <Skull />,
         color:     "border-purple-500/50",
         textColor: "text-purple-700",
 
@@ -349,16 +363,33 @@ export const CharacterViewer: React.FC = () => {
 
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                    className="space-y-6 max-w-[1600px] mx-auto px-4 pb-24">
+                    className="relative space-y-6 max-w-[1600px] mx-auto px-4 pb-24">
+            {/* Атмосферный фон для эффекта стекла */}
+            <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+                <div className="absolute -left-20 top-10 h-[28rem] w-[28rem] rounded-full bg-blue-600/20 blur-[130px]" />
+                <div className="absolute right-0 top-1/4 h-[26rem] w-[26rem] rounded-full bg-violet-600/20 blur-[130px]" />
+                <div className="absolute bottom-0 left-1/3 h-[24rem] w-[24rem] rounded-full bg-cyan-500/10 blur-[130px]" />
+                <div
+                    className="absolute inset-0 opacity-[0.15]"
+                    style={{
+                        backgroundImage:
+                            'linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px)',
+                        backgroundSize: '44px 44px',
+                    }}
+                />
+            </div>
+
             <div className="max-w-3xl mx-auto"><SearchForm onSearch={searchCharacters} isLoading={isLoading} /></div>
 
             <CharacterProfile names={chars.map(c => c.name)} isCompare={isCompare} />
+
+            <HeroHighlights c1={c1} c2={c2} charNames={charNames} />
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <div className="lg:col-span-8 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {STAT_GROUPS.map(group => (
-                            <Card key={group.title} title={group.title} className={group.color}>
+                            <Card key={group.title} title={group.title} accent={group.accent} icon={group.icon}>
                                 {group.stats.map(stat => {
                                     // Логика получения значения: formatter (весь объект) > valueFormatter (поле) > сырое значение
                                     const val1 = stat.formatter ? stat.formatter(c1) : (stat.valueFormatter ? stat.valueFormatter(c1[stat.key]) : c1[stat.key]);
@@ -383,7 +414,7 @@ export const CharacterViewer: React.FC = () => {
                 </div>
 
                 <div className="lg:col-span-4 space-y-6">
-                    <Card title="Главное" className="border-red-500/50">
+                    <Card title="Главное" accent="red" icon={<HeartPulse />}>
                         <ProgressBar label="HP" current={parseInt(c1.currentHP)} max={parseInt(c1.maxHP)}
                                      color="bg-red-500" compareCurrent={c2 ? parseInt(c2.currentHP) : undefined}
                                      compareMax={c2 ? parseInt(c2.maxWeight) : undefined} />
@@ -413,7 +444,7 @@ export const CharacterViewer: React.FC = () => {
                     </Card>
 
                     {unknownKeys.length > 0 && (
-                        <Card title="Доп. сигнатуры" className="border-pink-500/20 opacity-60">
+                        <Card title="Доп. сигнатуры" accent="pink" className="opacity-70">
                             <div className="space-y-1">
                                 {unknownKeys.map(key => (
                                     <StatRow key={key} label={String(key)} value={c1[key]} compareValue={c2?.[key]}
@@ -427,6 +458,59 @@ export const CharacterViewer: React.FC = () => {
         </motion.div>
     );
 };
+
+const HIGHLIGHTS: { key: keyof CharacterParams; label: string; icon: React.ReactNode; glow: string; text: string }[] = [
+    { key: "attack",  label: "Атака",    icon: <Sword className="h-4 w-4" />,       glow: "bg-orange-500/25",  text: "text-orange-300" },
+    { key: "defence", label: "Защита",   icon: <ShieldCheck className="h-4 w-4" />, glow: "bg-emerald-500/25", text: "text-emerald-300" },
+    { key: "maxHP",   label: "Здоровье", icon: <HeartPulse className="h-4 w-4" />,  glow: "bg-rose-500/25",    text: "text-rose-300" },
+    { key: "maxMP",   label: "Мана",     icon: <Droplets className="h-4 w-4" />,    glow: "bg-blue-500/25",    text: "text-blue-300" },
+];
+
+const KpiTile: React.FC<{ h: (typeof HIGHLIGHTS)[number]; i: number; v1: number; v2: number | null; otherName: string }> = ({ h, i, v1, v2, otherName }) => {
+    const { tiltProps, glareBackground } = useTilt({ max: 12 });
+    return (
+        <div className="[perspective:900px]">
+            <motion.div
+                {...tiltProps}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.04 * i, duration: 0.3, ease: "easeOut" }}
+                className="group/kpi relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08)] backdrop-blur-2xl transition-colors duration-500 will-change-transform hover:border-white/20"
+            >
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/[0.10] to-transparent" />
+                <motion.div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover/kpi:opacity-100" style={{ background: glareBackground }} />
+                <div className={`pointer-events-none absolute -right-6 -top-8 h-24 w-24 rounded-full blur-3xl transition-opacity duration-500 group-hover/kpi:opacity-80 ${h.glow}`} />
+                <div className="relative flex items-center gap-2">
+                    <span className={`grid h-6 w-6 place-items-center rounded-lg border border-white/10 bg-white/5 ${h.text}`}>{h.icon}</span>
+                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">{h.label}</span>
+                </div>
+                <div className="relative mt-2 flex items-baseline gap-2">
+                    <span className="font-unbounded text-xl font-black text-white">{v1.toLocaleString()}</span>
+                    {v2 !== null && (
+                        <span
+                            className={`font-unbounded text-xs font-black ${
+                                v1 === v2 ? "text-slate-500" : v1 > v2 ? "text-emerald-400" : "text-rose-400"
+                            }`}
+                            title={`${otherName}: ${v2.toLocaleString()}`}
+                        >
+                            {v1 === v2 ? "=" : `${v1 > v2 ? "+" : ""}${(v1 - v2).toLocaleString()}`}
+                        </span>
+                    )}
+                </div>
+            </motion.div>
+        </div>
+    );
+};
+
+const HeroHighlights: React.FC<{ c1: CharacterParams; c2: CharacterParams | null; charNames: [string, string] }> = ({ c1, c2, charNames }) => (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {HIGHLIGHTS.map((h, i) => {
+            const v1 = parseFloat(String(c1[h.key]).replace(/[^0-9.-]/g, "")) || 0;
+            const v2 = c2 ? parseFloat(String(c2[h.key]).replace(/[^0-9.-]/g, "")) || 0 : null;
+            return <KpiTile key={h.key} h={h} i={i} v1={v1} v2={v2} otherName={charNames[1]} />;
+        })}
+    </div>
+);
 
 const InitialState = ({ onSearch, isLoading }: { onSearch: (n: string[]) => void, isLoading: boolean }) => (
     <div className="max-w-3xl mx-auto px-4 py-10">

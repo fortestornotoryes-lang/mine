@@ -1,4 +1,7 @@
 
+export const MINE_GRID_WIDTH = 21;
+export const MINE_GRID_HEIGHT = 13;
+
 export interface MineInfo {
   name: string;
   id: number;

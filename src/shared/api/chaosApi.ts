@@ -8,8 +8,9 @@ import { MineDepletionData } from '@/entities/mine/model/types.ts';
 type ProxyMapper = (url: string) => string;
 
 const PROXY_LIST: ProxyMapper[] = [
-    (url: string) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+    (url: string) => `https://cors-get-proxy.sirjosh.workers.dev/?url=${encodeURIComponent(url)}`,
     (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+    (url: string) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
 ];
 
 /**
@@ -50,8 +51,7 @@ export class ChaosApiService {
             try {
                 // Исправление: используем fetch из globalThis
                 const res = await (globalThis as any).fetch(proxyUrl, {
-                    signal: controller.signal,
-                    headers: { 'Cache-Control': 'no-cache' }
+                    signal: controller.signal
                 });
 
                 env.clearTimeout(timeoutId);

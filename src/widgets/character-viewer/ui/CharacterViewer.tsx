@@ -191,30 +191,11 @@ const STAT_GROUPS: { title: string; accent: AccentKey; icon: React.ReactNode; co
                 valueFormatter: toPercent,
             },
             {
-                key:            "poisonResist_pierce",
-                label:          "Пробой яда",
-                icon:           <Wind className="text-emerald-600" />,
-                valueFormatter: toPercent,
-            },
-
-            {
                 key:   "parry",
                 label: "Парирование",
                 icon:  <Swords className="text-slate-400" />,
             },
 
-            {
-                key:            "resistance_pierce_abs",
-                label:          "Абс. сопр. пробою",
-                icon:           <ShieldX className="text-rose-400" />,
-                valueFormatter: toPercent,
-            },
-            {
-                key:            "resistance_pierce_perc",
-                label:          "% сопр. пробою",
-                icon:           <ShieldX className="text-rose-400" />,
-                valueFormatter: toPercent,
-            },
             {
                 key:   "evasion",
                 label: "Уклонение",
@@ -256,10 +237,34 @@ const STAT_GROUPS: { title: string; accent: AccentKey; icon: React.ReactNode; co
                 icon:           <ShieldX className="text-rose-400" />,
                 valueFormatter: toPercent,
             },
+        ],
+    },
+    {
+        title:     "Магия стихий",
+        accent:    "orange",
+        icon:      <Flame />,
+        color:     "border-orange-500/50",
+        textColor: "text-orange-700",
+
+        stats: [
+            { key: "damageFactor", label: "Разрушитель", icon: <Flame />, valueFormatter: toFactor },
+            { key: "manaExpDecrease_elem", label: "Сохранение магии стихий", icon: <Droplets />, valueFormatter: toManaSavings },
             {
                 key:            "resistanceShieldAuxDamage",
-                label:          "Доп. урон щита",
+                label:          "Доп. урон щиту сопротивления",
                 icon:           <Zap className="text-purple-300" />,
+                valueFormatter: toPercent,
+            },
+            {
+                key:            "resistance_pierce_perc",
+                label:          "% сопр. пробою",
+                icon:           <ShieldX className="text-rose-400" />,
+                valueFormatter: toPercent,
+            },
+            {
+                key:            "resistance_pierce_abs",
+                label:          "Абс. сопр. пробою",
+                icon:           <ShieldX className="text-rose-400" />,
                 valueFormatter: toPercent,
             },
         ],
@@ -357,7 +362,7 @@ const STAT_GROUPS: { title: string; accent: AccentKey; icon: React.ReactNode; co
             { key:              "alchemyPotionsSaveChance",
                 label:          "Экономия алхим. зелий",
                 icon:           <Skull />,
-                valueFormatter: toManaSavings,
+                valueFormatter: toPercent,
             },
             { key:              "manaExpDecrease_faith",
                 label:          "manaExpDecrease_faith",
@@ -386,6 +391,13 @@ const STAT_GROUPS: { title: string; accent: AccentKey; icon: React.ReactNode; co
 
         stats: [
             { key: "defiler", label: "Осквернитель", icon: <Biohazard />, valueFormatter: toFactor },
+            { key: "manaExpDecrease_plague", label: "Сохранение магии Осквернитель", icon: <Droplets />, valueFormatter: toManaSavings },
+            {
+                key:            "poisonResist_pierce",
+                label:          "Пробой яда",
+                icon:           <Wind className="text-emerald-600" />,
+                valueFormatter: toPercent,
+            },
             { key: "plagueBringer", label: "Чумной", icon: <Biohazard className="text-lime-500" /> },
             { key: "plagueDoctorDamage", label: "Урон чумного доктора", icon: <Skull className="text-lime-400" />, valueFormatter: toPercent },
             { key: "graySores", label: "Серые язвы", icon: <Droplets className="text-slate-400" /> },
@@ -478,11 +490,11 @@ export const CharacterViewer: React.FC = () => {
 
             <CharacterProfile names={chars.map(c => c.name)} isCompare={isCompare} />
 
-            <div className="[column-fill:_balance] gap-6 columns-1 md:columns-2 xl:columns-3 [&>*]:mb-6 [&>*]:break-inside-avoid">
-                    <ProfileCard i1={i1} i2={i2} charNames={charNames} />
-
-                    {renderGroupCard(STAT_GROUPS[0])}
-
+            {(() => {
+                const items: { node: React.ReactNode; weight: number }[] = [];
+                items.push({ node: <ProfileCard i1={i1} i2={i2} charNames={charNames} />, weight: 13 });
+                items.push({ node: renderGroupCard(STAT_GROUPS[0]), weight: 2 + STAT_GROUPS[0].stats.length });
+                items.push({ node: (
                     <Card title="Главное" accent="red" icon={<HeartPulse />}>
                         <ProgressBar label="HP" current={parseInt(c1.currentHP)} max={parseInt(c1.maxHP)}
                                      color="bg-red-500" compareCurrent={c2 ? parseInt(c2.currentHP) : undefined}
@@ -521,10 +533,14 @@ export const CharacterViewer: React.FC = () => {
                             compareMax={c2 ? parseInt(c2.maxWeight) : undefined} // Важно добавить и это
                         />
                     </Card>
+                ), weight: 22 });
 
-                    {STAT_GROUPS.slice(1).map(renderGroupCard)}
+                STAT_GROUPS.slice(1).forEach(g => {
+                    items.push({ node: renderGroupCard(g), weight: 2 + g.stats.length });
+                });
 
-                    {unknownKeys.length > 0 && (
+                if (unknownKeys.length > 0) {
+                    items.push({ node: (
                         <Card title="Доп. сигнатуры" accent="pink" className="opacity-70">
                             <div className="space-y-1">
                                 {unknownKeys.map(key => (
@@ -533,8 +549,28 @@ export const CharacterViewer: React.FC = () => {
                                 ))}
                             </div>
                         </Card>
-                    )}
-            </div>
+                    ), weight: 2 + unknownKeys.length });
+                }
+
+                const numCols = 3;
+                const cols: React.ReactNode[][] = Array.from({ length: numCols }, () => []);
+                const heights = new Array(numCols).fill(0);
+                items.forEach(item => {
+                    const target = heights.indexOf(Math.min(...heights));
+                    cols[target].push(item.node);
+                    heights[target] += item.weight;
+                });
+
+                return (
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 items-start">
+                        {cols.map((col, i) => (
+                            <div key={i} className="flex flex-col gap-6 min-w-0">
+                                {col.map((node, j) => <React.Fragment key={j}>{node}</React.Fragment>)}
+                            </div>
+                        ))}
+                    </div>
+                );
+            })()}
         </motion.div>
     );
 };

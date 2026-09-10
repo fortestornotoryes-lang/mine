@@ -470,12 +470,12 @@ export const CharacterViewer: React.FC = () => {
 
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                    className="relative space-y-6 max-w-[1600px] mx-auto px-4 pb-24">
+                    className="relative space-y-6 max-w-400 mx-auto px-4 pb-24">
             {/* Атмосферный фон для эффекта стекла */}
             <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-                <div className="absolute -left-20 top-10 h-[28rem] w-[28rem] rounded-full bg-blue-600/20 blur-[130px]" />
-                <div className="absolute right-0 top-1/4 h-[26rem] w-[26rem] rounded-full bg-violet-600/20 blur-[130px]" />
-                <div className="absolute bottom-0 left-1/3 h-[24rem] w-[24rem] rounded-full bg-cyan-500/10 blur-[130px]" />
+                <div className="absolute -left-20 top-10 h-112 w-md rounded-full bg-blue-600/20 blur-[130px]" />
+                <div className="absolute right-0 top-1/4 h-104 w-104 rounded-full bg-violet-600/20 blur-[130px]" />
+                <div className="absolute bottom-0 left-1/3 h-96 w-[24rem] rounded-full bg-cyan-500/10 blur-[130px]" />
                 <div
                     className="absolute inset-0 opacity-[0.15]"
                     style={{

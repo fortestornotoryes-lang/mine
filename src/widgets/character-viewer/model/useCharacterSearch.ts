@@ -1,10 +1,11 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { ChaosApiService } from '@/shared/api/chaosApi'; // Используем алиасы из твоего конфига
-import { CharacterParams } from '@/entities/character/model/types';
+import { CharacterInfo, CharacterParams } from '@/entities/character/model/types';
 
 export interface CharacterState {
     name: string;
     data: CharacterParams;
+    info: CharacterInfo | null;
 }
 
 const LS_KEY = 'chaosage:lastSearch';
@@ -48,8 +49,12 @@ export const useCharacterSearch = () => {
 
         try {
             const promises = names.map(async (name) => {
-                const data = await ChaosApiService.getCharacterParams(name);
-                return { name, data };
+                const [data, info] = await Promise.all([
+                    ChaosApiService.getCharacterParams(name),
+                    // Публичный профиль опционален — его сбой не должен ронять основную загрузку
+                    ChaosApiService.getCharacterInfo(name).catch(() => null),
+                ]);
+                return { name, data, info };
             });
 
             const results = await Promise.all(promises);

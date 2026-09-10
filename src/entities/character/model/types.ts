@@ -88,3 +88,39 @@ export interface CharacterParams {
   elementalEffectChance: string;
 }
 
+/**
+ * Характеристика персонажа в виде «всего (база + бонус)».
+ */
+export interface CharacterAttribute {
+  total: number;
+  base: number;
+  bonus: number;
+}
+
+/**
+ * Данные публичного профиля (showInfo.php), которых нет в user_params.
+ */
+export interface CharacterInfo {
+  race: string;
+  raceLevel: number;
+  level: number;
+  profession: string;
+  professionLevel: number;
+  guild?: string;
+  clan?: string;
+  religion?: string;
+  faction?: string;
+  location?: string;
+  registeredAt?: string;
+  wins?: number;
+  losses?: number;
+  attributes: {
+    strength: CharacterAttribute;
+    constitution: CharacterAttribute;
+    dexterity: CharacterAttribute;
+    intelligence: CharacterAttribute;
+    endurance: CharacterAttribute;
+    will: CharacterAttribute;
+  };
+}
+

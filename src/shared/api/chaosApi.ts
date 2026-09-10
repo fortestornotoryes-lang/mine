@@ -1,5 +1,6 @@
 
-import { CharacterParams } from '@/entities/character/model/types.ts';
+import { parseCharacterInfo } from '@/entities/character/lib/parseCharacterInfo.ts';
+import { CharacterInfo, CharacterParams } from '@/entities/character/model/types.ts';
 import { MineDepletionData } from '@/entities/mine/model/types.ts';
 
 /**
@@ -33,7 +34,7 @@ export class ChaosApiService {
      * Generic метод для выполнения типизированных запросов.
      * Исправление: возвращаем any, так как Promise может не определяться в старых средах.
      */
-    private static async fetchViaProxy<T>(targetUrl: string): any {
+    private static async fetchViaProxy<T>(targetUrl: string, responseType: 'json' | 'text' = 'json'): any {
         const urlWithCache = `${targetUrl}${targetUrl.indexOf('?') !== -1 ? '&' : '?'}_t=${Date.now()}`;
 
         const attemptFetch = async (proxyIndex: number, attempt: number): any => {
@@ -58,7 +59,7 @@ export class ChaosApiService {
 
                 if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
 
-                const data = await res.json();
+                const data = responseType === 'text' ? await res.text() : await res.json();
 
                 // Бизнес-валидация для параметров персонажа
                 if (targetUrl.indexOf('user_params') !== -1) {
@@ -94,6 +95,13 @@ export class ChaosApiService {
         if (!userName.trim()) return (globalThis as any).Promise.reject(new Error('Имя пользователя не может быть пустым'));
         const url = `${this.BASE_URL}?request=user_params&user_name=${encodeURIComponent(userName)}`;
         return this.fetchViaProxy<CharacterParams>(url);
+    }
+
+    // Публичный профиль персонажа (showInfo.php) — раса, уровень, профессия, характеристики
+    public static getCharacterInfo(userName: string): Promise<CharacterInfo> {
+        if (!userName.trim()) return (globalThis as any).Promise.reject(new Error('Имя пользователя не может быть пустым'));
+        const url = `https://chaosage.ru/showInfo.php?avatar=${encodeURIComponent(userName)}`;
+        return this.fetchViaProxy<string>(url, 'text').then((html: string) => parseCharacterInfo(html));
     }
 
     public static getMineDepletion(mineId: number, level: number): any {

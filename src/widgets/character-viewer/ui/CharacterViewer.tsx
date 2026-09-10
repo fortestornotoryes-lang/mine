@@ -1,4 +1,4 @@
-import { CharacterParams } from "@/entities/character/model/types";
+import { CharacterInfo, CharacterParams } from "@/entities/character/model/types";
 import { ProgressBar }     from "@/entities/character/ui/ProgressBar";
 import { StatRow }         from "@/entities/character/ui/StatRow";
 import { SearchForm }      from "@/features/search-character/ui/SearchForm";
@@ -29,8 +29,6 @@ import {
     Zap,
 } from "lucide-react";
 import React, { useMemo }  from "react";
-
-import { useTilt }            from "@/shared/lib/useTilt";
 
 import { useCharacterSearch } from "../model/useCharacterSearch";
 import { CharacterProfile }   from "./CharacterProfile";
@@ -413,12 +411,14 @@ export const CharacterViewer: React.FC = () => {
         if (!chars || chars.length === 0) return null;
         const c1          = chars[0].data;
         const c2          = chars[1]?.data || null;
+        const i1          = chars[0].info || null;
+        const i2          = chars[1]?.info || null;
         const isCompare   = !!c2;
         const charNames   = chars.map(c => c.name) as [string, string];
         const allKeys     = Object.keys(c1) as (keyof CharacterParams)[];
         const unknownKeys = allKeys.filter(k => !HANDLED_KEYS.has(k));
 
-        return { c1, c2, isCompare, charNames, unknownKeys };
+        return { c1, c2, i1, i2, isCompare, charNames, unknownKeys };
     }, [chars]);
 
     const determineBetter = (v1: any, v2: any, lower = false) => {
@@ -431,7 +431,30 @@ export const CharacterViewer: React.FC = () => {
 
     if (!viewData) return <InitialState onSearch={searchCharacters} isLoading={isLoading} />;
 
-    const { c1, c2, isCompare, charNames, unknownKeys } = viewData;
+    const { c1, c2, i1, i2, isCompare, charNames, unknownKeys } = viewData;
+
+    const renderGroupCard = (group: (typeof STAT_GROUPS)[number]) => (
+        <Card key={group.title} title={group.title} accent={group.accent} icon={group.icon}>
+            {group.stats.map(stat => {
+                // Логика получения значения: formatter (весь объект) > valueFormatter (поле) > сырое значение
+                const val1 = stat.formatter ? stat.formatter(c1) : (stat.valueFormatter ? stat.valueFormatter(c1[stat.key]) : c1[stat.key]);
+                const val2 = c2 ? (stat.formatter ? stat.formatter(c2) : (stat.valueFormatter ? stat.valueFormatter(c2[stat.key]) : c2[stat.key])) : undefined;
+
+                return (
+                    <StatRow
+                        key={stat.key}
+                        label={stat.label}
+                        color={group.textColor}
+                        icon={stat.icon}
+                        value={val1}
+                        compareValue={val2}
+                        better={determineBetter(c1[stat.key], c2?.[stat.key])}
+                        charNames={charNames}
+                    />
+                );
+            })}
+        </Card>
+    );
 
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
@@ -455,9 +478,11 @@ export const CharacterViewer: React.FC = () => {
 
             <CharacterProfile names={chars.map(c => c.name)} isCompare={isCompare} />
 
-            <HeroHighlights c1={c1} c2={c2} charNames={charNames} />
-
             <div className="[column-fill:_balance] gap-6 columns-1 md:columns-2 xl:columns-3 [&>*]:mb-6 [&>*]:break-inside-avoid">
+                    <ProfileCard i1={i1} i2={i2} charNames={charNames} />
+
+                    {renderGroupCard(STAT_GROUPS[0])}
+
                     <Card title="Главное" accent="red" icon={<HeartPulse />}>
                         <ProgressBar label="HP" current={parseInt(c1.currentHP)} max={parseInt(c1.maxHP)}
                                      color="bg-red-500" compareCurrent={c2 ? parseInt(c2.currentHP) : undefined}
@@ -474,7 +499,7 @@ export const CharacterViewer: React.FC = () => {
                         <ProgressBar label="Ярость" current={parseInt(c1.rage)} max={parseInt(c1.rageLimit)}
                                      color="bg-orange-500" compareCurrent={c2 ? parseInt(c2.rage) : undefined}
                                      compareMax={c2 ? parseInt(c2.rageLimit) : undefined} />
-                        <StatRow label="Прирост ярости" value={c1.rage_gain} compareValue={c2?.rage_gain}
+                        <StatRow label="Стартовая ярости" value={c1.rage_gain} compareValue={c2?.rage_gain}
                                  icon={<Flame className="h-3 w-3" />} charNames={charNames} />
                         <StatRow label="Макс. ярость" value={c1.rage_max} compareValue={c2?.rage_max}
                                  icon={<Flame className="h-3 w-3" />} charNames={charNames} />
@@ -497,28 +522,7 @@ export const CharacterViewer: React.FC = () => {
                         />
                     </Card>
 
-                    {STAT_GROUPS.map(group => (
-                        <Card key={group.title} title={group.title} accent={group.accent} icon={group.icon}>
-                            {group.stats.map(stat => {
-                                // Логика получения значения: formatter (весь объект) > valueFormatter (поле) > сырое значение
-                                const val1 = stat.formatter ? stat.formatter(c1) : (stat.valueFormatter ? stat.valueFormatter(c1[stat.key]) : c1[stat.key]);
-                                const val2 = c2 ? (stat.formatter ? stat.formatter(c2) : (stat.valueFormatter ? stat.valueFormatter(c2[stat.key]) : c2[stat.key])) : undefined;
-
-                                return (
-                                    <StatRow
-                                        key={stat.key}
-                                        label={stat.label}
-                                        color={group.textColor}
-                                        icon={stat.icon}
-                                        value={val1}
-                                        compareValue={val2}
-                                        better={determineBetter(c1[stat.key], c2?.[stat.key])}
-                                        charNames={charNames}
-                                    />
-                                );
-                            })}
-                        </Card>
-                    ))}
+                    {STAT_GROUPS.slice(1).map(renderGroupCard)}
 
                     {unknownKeys.length > 0 && (
                         <Card title="Доп. сигнатуры" accent="pink" className="opacity-70">
@@ -535,58 +539,55 @@ export const CharacterViewer: React.FC = () => {
     );
 };
 
-const HIGHLIGHTS: { key: keyof CharacterParams; label: string; icon: React.ReactNode; glow: string; text: string }[] = [
-    { key: "attack",  label: "Атака",    icon: <Sword className="h-4 w-4" />,       glow: "bg-orange-500/25",  text: "text-orange-300" },
-    { key: "defence", label: "Защита",   icon: <ShieldCheck className="h-4 w-4" />, glow: "bg-emerald-500/25", text: "text-emerald-300" },
-    { key: "maxHP",   label: "Здоровье", icon: <HeartPulse className="h-4 w-4" />,  glow: "bg-rose-500/25",    text: "text-rose-300" },
-    { key: "maxMP",   label: "Мана",     icon: <Droplets className="h-4 w-4" />,    glow: "bg-blue-500/25",    text: "text-blue-300" },
+const ATTRS: { key: keyof CharacterInfo["attributes"]; label: string; icon: React.ReactNode }[] = [
+    { key: "strength",     label: "Сила",          icon: <Sword className="text-orange-400" /> },
+    { key: "constitution", label: "Телосложение",  icon: <HeartPulse className="text-rose-400" /> },
+    { key: "dexterity",    label: "Ловкость",      icon: <Move className="text-cyan-400" /> },
+    { key: "intelligence", label: "Интеллект",     icon: <Brain className="text-violet-400" /> },
+    { key: "endurance",    label: "Выносливость",  icon: <ShieldCheck className="text-emerald-400" /> },
+    { key: "will",         label: "Воля",          icon: <Sparkles className="text-amber-400" /> },
 ];
 
-const KpiTile: React.FC<{ h: (typeof HIGHLIGHTS)[number]; i: number; v1: number; v2: number | null; otherName: string }> = ({ h, i, v1, v2, otherName }) => {
-    const { tiltProps, glareBackground } = useTilt({ max: 12 });
+const ProfileCard: React.FC<{ i1: CharacterInfo | null; i2: CharacterInfo | null; charNames: [string, string] }> = ({ i1, i2, charNames }) => {
+    if (!i1) return null;
+    const nameLevel = (race: string, lvl: number) => (lvl ? `${race} (${lvl})` : race || "—");
+
     return (
-        <div className="[perspective:900px]">
-            <motion.div
-                {...tiltProps}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.04 * i, duration: 0.3, ease: "easeOut" }}
-                className="group/kpi relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08)] backdrop-blur-2xl transition-colors duration-500 will-change-transform hover:border-white/20"
-            >
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/[0.10] to-transparent" />
-                <motion.div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover/kpi:opacity-100" style={{ background: glareBackground }} />
-                <div className={`pointer-events-none absolute -right-6 -top-8 h-24 w-24 rounded-full blur-3xl transition-opacity duration-500 group-hover/kpi:opacity-80 ${h.glow}`} />
-                <div className="relative flex items-center gap-2">
-                    <span className={`grid h-6 w-6 place-items-center rounded-lg border border-white/10 bg-white/5 ${h.text}`}>{h.icon}</span>
-                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">{h.label}</span>
-                </div>
-                <div className="relative mt-2 flex items-baseline gap-2">
-                    <span className="font-unbounded text-xl font-black text-white">{v1.toLocaleString()}</span>
-                    {v2 !== null && (
-                        <span
-                            className={`font-unbounded text-xs font-black ${
-                                v1 === v2 ? "text-slate-500" : v1 > v2 ? "text-emerald-400" : "text-rose-400"
-                            }`}
-                            title={`${otherName}: ${v2.toLocaleString()}`}
-                        >
-                            {v1 === v2 ? "=" : `${v1 > v2 ? "+" : ""}${(v1 - v2).toLocaleString()}`}
-                        </span>
-                    )}
-                </div>
-            </motion.div>
-        </div>
+        <Card title="Профиль" accent="violet" icon={<Activity />}>
+            <StatRow label="Раса" value={nameLevel(i1.race, i1.raceLevel)}
+                     compareValue={i2 ? nameLevel(i2.race, i2.raceLevel) : undefined} charNames={charNames} />
+            <StatRow label="Уровень" value={i1.level || "—"} compareValue={i2 ? (i2.level || "—") : undefined}
+                     charNames={charNames} />
+            <StatRow label="Профессия" value={nameLevel(i1.profession, i1.professionLevel)}
+                     compareValue={i2 ? nameLevel(i2.profession, i2.professionLevel) : undefined} charNames={charNames} />
+            {(i1.wins !== undefined || i1.losses !== undefined) && (
+                <StatRow label="Победы / Поражения" value={`${i1.wins ?? 0} / ${i1.losses ?? 0}`}
+                         compareValue={i2 ? `${i2.wins ?? 0} / ${i2.losses ?? 0}` : undefined} charNames={charNames} />
+            )}
+
+            <div className="h-px w-full bg-slate-800 my-4" />
+            <p className="mb-2 text-[9px] font-black uppercase tracking-[0.25em] text-slate-500">Характеристики</p>
+
+            {ATTRS.map((a) => {
+                const v1 = i1.attributes[a.key];
+                const v2 = i2?.attributes[a.key];
+                return (
+                    <StatRow
+                        key={a.key}
+                        label={a.label}
+                        icon={a.icon}
+                        color="text-violet-300"
+                        value={v1.total}
+                        subValue={`${v1.base}+${v1.bonus}`}
+                        compareValue={v2 ? v2.total : undefined}
+                        better={!v2 ? "none" : v1.total === v2.total ? "none" : v1.total > v2.total ? "first" : "second"}
+                        charNames={charNames}
+                    />
+                );
+            })}
+        </Card>
     );
 };
-
-const HeroHighlights: React.FC<{ c1: CharacterParams; c2: CharacterParams | null; charNames: [string, string] }> = ({ c1, c2, charNames }) => (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {HIGHLIGHTS.map((h, i) => {
-            const v1 = parseFloat(String(c1[h.key]).replace(/[^0-9.-]/g, "")) || 0;
-            const v2 = c2 ? parseFloat(String(c2[h.key]).replace(/[^0-9.-]/g, "")) || 0 : null;
-            return <KpiTile key={h.key} h={h} i={i} v1={v1} v2={v2} otherName={charNames[1]} />;
-        })}
-    </div>
-);
 
 const InitialState = ({ onSearch, isLoading }: { onSearch: (n: string[]) => void, isLoading: boolean }) => (
     <div className="max-w-3xl mx-auto px-4 py-10">

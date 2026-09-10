@@ -107,11 +107,6 @@ const STAT_GROUPS: { title: string; accent: AccentKey; icon: React.ReactNode; co
                 icon:  <Timer className="text-blue-400" />,
             },
             {
-                key:   "rage_gain",
-                label: "Стартовая ярость",
-                icon:  <Flame className="text-orange-600" />,
-            },
-            {
                 key: "vamp_magical",
                 label: "Магический вампиризм",
                 icon: <Droplets className="text-blue-400" />, // Синие капли (кража маны/жизни магией)
@@ -133,6 +128,18 @@ const STAT_GROUPS: { title: string; accent: AccentKey; icon: React.ReactNode; co
                 key: "armorShieldAuxDamage",
                 label: "Урон физ. щита",
                 icon: <ShieldAlert className="text-orange-400" />, // Щит с предупреждением (контратака/урон)
+                valueFormatter: toPercent,
+            },
+            {
+                key:            "crit4x",
+                label:          "Шанс x4 крит",
+                icon:           <Zap className="text-yellow-300" />,
+                valueFormatter: toPercent,
+            },
+            {
+                key:            "elementalEffectChance",
+                label:          "Шанс стих. эффекта",
+                icon:           <Flame className="text-orange-300" />,
                 valueFormatter: toPercent,
             },
         ],
@@ -162,7 +169,7 @@ const STAT_GROUPS: { title: string; accent: AccentKey; icon: React.ReactNode; co
                 key:       "resistance",
                 label:     "Сопротивление ( Щит )",
                 icon:      <Sparkles className="text-purple-400" />,
-                formatter: (c) => `${c.armorShield} ( ${c.resistanceShield} )`,
+                formatter: (c) => `${c.resistance} ( ${c.resistanceShield} )`,
 
             },
 
@@ -205,20 +212,44 @@ const STAT_GROUPS: { title: string; accent: AccentKey; icon: React.ReactNode; co
                 valueFormatter: toPercent,
             },
             {
+                key:            "resistance_pierce_perc",
+                label:          "% сопр. пробою",
+                icon:           <ShieldX className="text-rose-400" />,
+                valueFormatter: toPercent,
+            },
+            {
                 key:   "evasion",
                 label: "Уклонение",
                 icon:  <Move className="text-cyan-400" />,
             },
             {
+                key:            "evasionMagic",
+                label:          "Уклонение от магии",
+                icon:           <Move className="text-indigo-400" />,
+                valueFormatter: toPercent,
+            },
+            {
+                key:            "counterstrike",
+                label:          "Контрудар",
+                icon:           <Swords className="text-amber-400" />,
+                valueFormatter: toPercent,
+            },
+            {
+                key:            "grace",
+                label:          "Грация",
+                icon:           <Wind className="text-cyan-300" />,
+                valueFormatter: toPercent,
+            },
+            {
                 key:            "reflectionPhysical",
-                label:          "Уклонение от ударов",
-                icon:           <ShieldX className="text-rose-400" />,
+                label:          "Отражение ударов",
+                icon:           <RefreshCw className="text-rose-400" />,
                 valueFormatter: toPercent,
             },
             {
                 key:            "reflectionMagic",
-                label:          "Уклонение от магии",
-                icon:           <ShieldX className="text-rose-400" />,
+                label:          "Отражение магии",
+                icon:           <RefreshCw className="text-rose-400" />,
                 valueFormatter: toPercent,
             },
             {
@@ -248,6 +279,27 @@ const STAT_GROUPS: { title: string; accent: AccentKey; icon: React.ReactNode; co
             { key: "summonFactor", label: "Призыватель", icon: <Skull />, valueFormatter: toFactor },
             { key: "defiler", label: "Осквернитель", icon: <Biohazard />, valueFormatter: toFactor },
             { key: "faith", label: "Вера", icon: <Activity /> },
+            { key: "exorcism", label: "Изгнание нечисти", icon: <Sparkles className="text-amber-300" /> },
+        ],
+    },
+    {
+        title:     "Вера и Чума",
+        accent:    "purple",
+        icon:      <Biohazard />,
+        color:     "border-fuchsia-500/50",
+        textColor: "text-fuchsia-700",
+
+        stats: [
+            { key: "faithSeal1", label: "Печать веры I", icon: <Star className="text-amber-300" /> },
+            { key: "faithSeal2", label: "Печать веры II", icon: <Star className="text-amber-400" /> },
+            { key: "faithEffect", label: "Эффект веры", icon: <Activity className="text-amber-300" />, valueFormatter: toPercent },
+            { key: "plagueBringer", label: "Чумной", icon: <Biohazard className="text-lime-500" /> },
+            { key: "plagueDoctorDamage", label: "Урон чумного доктора", icon: <Skull className="text-lime-400" />, valueFormatter: toPercent },
+            { key: "graySores", label: "Серые язвы", icon: <Droplets className="text-slate-400" /> },
+            { key: "blackSores", label: "Чёрные язвы", icon: <Droplets className="text-slate-600" /> },
+            { key: "poisonVeil", label: "Ядовитая завеса", icon: <Wind className="text-lime-500" /> },
+            { key: "toxinoPhobia", label: "Токсинофобия", icon: <Biohazard className="text-lime-600" /> },
+            { key: "activatedToxins", label: "Активные токсины", icon: <FlaskConical className="text-lime-400" /> },
         ],
     },
     {
@@ -324,13 +376,17 @@ const STAT_GROUPS: { title: string; accent: AccentKey; icon: React.ReactNode; co
                 valueFormatter: toPercent,
             },
             { key: "summons_ap_abs", label: "Минус од у призыва", icon: <Star /> },
+            { key: "summonsDualHit", label: "Двойной удар призыва", icon: <Swords />, valueFormatter: toPercent },
+            { key: "summonsDefencesIgnore", label: "Игнор защиты призыва", icon: <ShieldX />, valueFormatter: toPercent },
 
         ],
     },
 ];
 
 const HANDLED_KEYS = new Set([
-    "maxHP", "maxMP", "recoveryHP", "recoveryMP", "name", "maxDamage", "armorShield", "maxWeight", "currentWeight", "rage", "currentHP", "currentMP", "maxAP", "currentMP", "resistanceShield", "baseAP", "baseAP", "baseAP",
+    "maxHP", "maxMP", "recoveryHP", "recoveryMP", "name", "maxDamage", "armorShield", "maxWeight", "currentWeight",
+    "currentHP", "currentMP", "maxAP", "resistanceShield", "baseAP", "baseAPExact", "ap_start",
+    "rage", "rageLimit", "rage_max", "rage_gain",
     ...STAT_GROUPS.flatMap(g => g.stats.map(s => s.key)),
 ]);
 
@@ -417,17 +473,27 @@ export const CharacterViewer: React.FC = () => {
                     <Card title="Главное" accent="red" icon={<HeartPulse />}>
                         <ProgressBar label="HP" current={parseInt(c1.currentHP)} max={parseInt(c1.maxHP)}
                                      color="bg-red-500" compareCurrent={c2 ? parseInt(c2.currentHP) : undefined}
-                                     compareMax={c2 ? parseInt(c2.maxWeight) : undefined} />
+                                     compareMax={c2 ? parseInt(c2.maxHP) : undefined} />
                         <StatRow label="Регенерация HP" value={c1.recoveryHP} compareValue={c2?.recoveryHP}
                                  icon={<RefreshCw className="h-3 w-3" />} charNames={charNames} />
                         <div className="h-6" />
                         <ProgressBar label="MP" current={parseInt(c1.currentMP)} max={parseInt(c1.maxMP)}
                                      color="bg-blue-500" compareCurrent={c2 ? parseInt(c2.currentMP) : undefined}
-                                     compareMax={c2 ? parseInt(c2.maxWeight) : undefined} />
+                                     compareMax={c2 ? parseInt(c2.maxMP) : undefined} />
                         <StatRow label="Регенерация MP" value={c1.recoveryMP} compareValue={c2?.recoveryMP}
                                  icon={<RefreshCw className="h-3 w-3" />} charNames={charNames} />
+                        <div className="h-6" />
+                        <ProgressBar label="Ярость" current={parseInt(c1.rage)} max={parseInt(c1.rageLimit)}
+                                     color="bg-orange-500" compareCurrent={c2 ? parseInt(c2.rage) : undefined}
+                                     compareMax={c2 ? parseInt(c2.rageLimit) : undefined} />
+                        <StatRow label="Прирост ярости" value={c1.rage_gain} compareValue={c2?.rage_gain}
+                                 icon={<Flame className="h-3 w-3" />} charNames={charNames} />
+                        <StatRow label="Макс. ярость" value={c1.rage_max} compareValue={c2?.rage_max}
+                                 icon={<Flame className="h-3 w-3" />} charNames={charNames} />
                         <div className="h-px w-full bg-slate-800 my-4"></div>
                         <StatRow label="ОД на действие" value={c1.baseAP} compareValue={c2?.baseAP}
+                                 charNames={charNames} />
+                        <StatRow label="ОД на действие (точно)" value={c1.baseAPExact} compareValue={c2?.baseAPExact}
                                  charNames={charNames} />
                         <StatRow label="Стартовый ОД" value={c1.ap_start} compareValue={c2?.ap_start}
                                  charNames={charNames} />

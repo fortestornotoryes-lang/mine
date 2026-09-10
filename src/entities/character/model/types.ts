@@ -83,5 +83,8 @@ export interface CharacterParams {
   alchemyPotionsSaveChance: string;
   poisonResist_pierce: string;
   grace: string;
+  summonsDualHit: string;
+  summonsDefencesIgnore: string;
+  elementalEffectChance: string;
 }
 

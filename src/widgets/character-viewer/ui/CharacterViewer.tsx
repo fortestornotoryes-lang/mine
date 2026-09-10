@@ -267,6 +267,19 @@ const STAT_GROUPS: { title: string; accent: AccentKey; icon: React.ReactNode; co
         ],
     },
     {
+        title:     "Вера",
+        accent:    "amber",
+        icon:      <Activity />,
+        color:     "border-amber-500/50",
+        textColor: "text-amber-700",
+
+        stats: [
+            { key: "faithSeal1", label: "Печать веры I", icon: <Star className="text-amber-300" /> },
+            { key: "faithSeal2", label: "Печать веры II", icon: <Star className="text-amber-400" /> },
+            { key: "faithEffect", label: "Эффект веры", icon: <Activity className="text-amber-300" />, valueFormatter: toPercent },
+        ],
+    },
+    {
         title:     "Магия",
         accent:    "red",
         icon:      <Flame />,
@@ -279,27 +292,32 @@ const STAT_GROUPS: { title: string; accent: AccentKey; icon: React.ReactNode; co
             { key: "summonFactor", label: "Призыватель", icon: <Skull />, valueFormatter: toFactor },
             { key: "defiler", label: "Осквернитель", icon: <Biohazard />, valueFormatter: toFactor },
             { key: "faith", label: "Вера", icon: <Activity /> },
-            { key: "exorcism", label: "Изгнание нечисти", icon: <Sparkles className="text-amber-300" /> },
+            { key: "exorcism", label: "Экзорцизм", icon: <Sparkles className="text-amber-300" /> },
         ],
     },
+
     {
-        title:     "Вера и Чума",
+        title:     "Призыв",
         accent:    "purple",
-        icon:      <Biohazard />,
-        color:     "border-fuchsia-500/50",
-        textColor: "text-fuchsia-700",
+        icon:      <Skull />,
+        color:     "border-purple-500/50",
+        textColor: "text-purple-700",
 
         stats: [
-            { key: "faithSeal1", label: "Печать веры I", icon: <Star className="text-amber-300" /> },
-            { key: "faithSeal2", label: "Печать веры II", icon: <Star className="text-amber-400" /> },
-            { key: "faithEffect", label: "Эффект веры", icon: <Activity className="text-amber-300" />, valueFormatter: toPercent },
-            { key: "plagueBringer", label: "Чумной", icon: <Biohazard className="text-lime-500" /> },
-            { key: "plagueDoctorDamage", label: "Урон чумного доктора", icon: <Skull className="text-lime-400" />, valueFormatter: toPercent },
-            { key: "graySores", label: "Серые язвы", icon: <Droplets className="text-slate-400" /> },
-            { key: "blackSores", label: "Чёрные язвы", icon: <Droplets className="text-slate-600" /> },
-            { key: "poisonVeil", label: "Ядовитая завеса", icon: <Wind className="text-lime-500" /> },
-            { key: "toxinoPhobia", label: "Токсинофобия", icon: <Biohazard className="text-lime-600" /> },
-            { key: "activatedToxins", label: "Активные токсины", icon: <FlaskConical className="text-lime-400" /> },
+            { key: "summonFactor", label: "Призыватель", icon: <Skull />, valueFormatter: toFactor },
+            { key: "manaExpDecrease_dark", label: "Сохранение маны тьмы", icon: <Skull />, valueFormatter: toManaSavings },
+            { key: "summons_ap_start", label: "Старт од у призыва", icon: <Flame /> },
+            { key:       "summons_ap_perc",
+                label:     "Минус % ОД у призыва (при 18 ОД)",
+                icon:      <Brain />,
+                formatter: (c) => {
+                    const perc = parseFloat(c.summons_ap_perc) || 0;
+                    return `${perc}%  (−${(18 * perc / 100).toFixed(1)} ОД)`;
+                },
+            },
+            { key: "summons_ap_abs", label: "Минус од у призыва", icon: <Star /> },
+            { key: "summonsDualHit", label: "Двойной удар призыва", icon: <Swords />, valueFormatter: toPercent },
+            { key: "summonsDefencesIgnore", label: "Игнор защиты призыва", icon: <ShieldX />, valueFormatter: toPercent },
         ],
     },
     {
@@ -362,23 +380,21 @@ const STAT_GROUPS: { title: string; accent: AccentKey; icon: React.ReactNode; co
         ],
     },
     {
-        title:     "Призыв",
+        title:     "Чума",
         accent:    "purple",
-        icon:      <Skull />,
-        color:     "border-purple-500/50",
-        textColor: "text-purple-700",
+        icon:      <Biohazard />,
+        color:     "border-fuchsia-500/50",
+        textColor: "text-fuchsia-700",
 
         stats: [
-            { key: "summons_ap_start", label: "Старт од у призыва", icon: <Flame /> },
-            { key:              "summons_ap_perc",
-                label:          "Минус процентного од у призыва",
-                icon:           <Brain />,
-                valueFormatter: toPercent,
-            },
-            { key: "summons_ap_abs", label: "Минус од у призыва", icon: <Star /> },
-            { key: "summonsDualHit", label: "Двойной удар призыва", icon: <Swords />, valueFormatter: toPercent },
-            { key: "summonsDefencesIgnore", label: "Игнор защиты призыва", icon: <ShieldX />, valueFormatter: toPercent },
-
+            { key: "defiler", label: "Осквернитель", icon: <Biohazard />, valueFormatter: toFactor },
+            { key: "plagueBringer", label: "Чумной", icon: <Biohazard className="text-lime-500" /> },
+            { key: "plagueDoctorDamage", label: "Урон чумного доктора", icon: <Skull className="text-lime-400" />, valueFormatter: toPercent },
+            { key: "graySores", label: "Серые язвы", icon: <Droplets className="text-slate-400" /> },
+            { key: "blackSores", label: "Чёрные язвы", icon: <Droplets className="text-slate-600" /> },
+            { key: "poisonVeil", label: "Ядовитая завеса", icon: <Wind className="text-lime-500" /> },
+            { key: "toxinoPhobia", label: "Токсинофобия", icon: <Biohazard className="text-lime-600" /> },
+            { key: "activatedToxins", label: "Активные токсины", icon: <FlaskConical className="text-lime-400" /> },
         ],
     },
 ];
@@ -441,35 +457,7 @@ export const CharacterViewer: React.FC = () => {
 
             <HeroHighlights c1={c1} c2={c2} charNames={charNames} />
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                <div className="lg:col-span-8 space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {STAT_GROUPS.map(group => (
-                            <Card key={group.title} title={group.title} accent={group.accent} icon={group.icon}>
-                                {group.stats.map(stat => {
-                                    // Логика получения значения: formatter (весь объект) > valueFormatter (поле) > сырое значение
-                                    const val1 = stat.formatter ? stat.formatter(c1) : (stat.valueFormatter ? stat.valueFormatter(c1[stat.key]) : c1[stat.key]);
-                                    const val2 = c2 ? (stat.formatter ? stat.formatter(c2) : (stat.valueFormatter ? stat.valueFormatter(c2[stat.key]) : c2[stat.key])) : undefined;
-
-                                    return (
-                                        <StatRow
-                                            key={stat.key}
-                                            label={stat.label}
-                                            color={group.textColor}
-                                            icon={stat.icon}
-                                            value={val1}
-                                            compareValue={val2}
-                                            better={determineBetter(c1[stat.key], c2?.[stat.key])}
-                                            charNames={charNames}
-                                        />
-                                    );
-                                })}
-                            </Card>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="lg:col-span-4 space-y-6">
+            <div className="[column-fill:_balance] gap-6 columns-1 md:columns-2 xl:columns-3 [&>*]:mb-6 [&>*]:break-inside-avoid">
                     <Card title="Главное" accent="red" icon={<HeartPulse />}>
                         <ProgressBar label="HP" current={parseInt(c1.currentHP)} max={parseInt(c1.maxHP)}
                                      color="bg-red-500" compareCurrent={c2 ? parseInt(c2.currentHP) : undefined}
@@ -509,6 +497,29 @@ export const CharacterViewer: React.FC = () => {
                         />
                     </Card>
 
+                    {STAT_GROUPS.map(group => (
+                        <Card key={group.title} title={group.title} accent={group.accent} icon={group.icon}>
+                            {group.stats.map(stat => {
+                                // Логика получения значения: formatter (весь объект) > valueFormatter (поле) > сырое значение
+                                const val1 = stat.formatter ? stat.formatter(c1) : (stat.valueFormatter ? stat.valueFormatter(c1[stat.key]) : c1[stat.key]);
+                                const val2 = c2 ? (stat.formatter ? stat.formatter(c2) : (stat.valueFormatter ? stat.valueFormatter(c2[stat.key]) : c2[stat.key])) : undefined;
+
+                                return (
+                                    <StatRow
+                                        key={stat.key}
+                                        label={stat.label}
+                                        color={group.textColor}
+                                        icon={stat.icon}
+                                        value={val1}
+                                        compareValue={val2}
+                                        better={determineBetter(c1[stat.key], c2?.[stat.key])}
+                                        charNames={charNames}
+                                    />
+                                );
+                            })}
+                        </Card>
+                    ))}
+
                     {unknownKeys.length > 0 && (
                         <Card title="Доп. сигнатуры" accent="pink" className="opacity-70">
                             <div className="space-y-1">
@@ -519,7 +530,6 @@ export const CharacterViewer: React.FC = () => {
                             </div>
                         </Card>
                     )}
-                </div>
             </div>
         </motion.div>
     );

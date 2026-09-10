@@ -77,7 +77,7 @@ export const StatRow: React.FC<StatRowProps> = ({
             {icon}
           </div>
         )}
-        <span className="text-slate-500 text-[10px] font-bold truncate pr-2 uppercase tracking-tight group-hover:text-slate-200 transition-colors">
+        <span className="text-slate-300 text-[10px] font-bold truncate pr-2 uppercase tracking-tight group-hover:text-slate-200 transition-colors">
           {label}
         </span>
       </div>

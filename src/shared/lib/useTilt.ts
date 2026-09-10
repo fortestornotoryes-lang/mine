@@ -15,7 +15,7 @@ export const useTilt = ({ max = 9 }: TiltOptions = {}) => {
     const rotateY = useSpring(useMotionValue(0), { stiffness: 180, damping: 18, mass: 0.4 });
     const glareX = useMotionValue(50);
     const glareY = useMotionValue(50);
-    const glareBackground = useMotionTemplate`radial-gradient(200px circle at ${glareX}% ${glareY}%, rgba(255,255,255,0.16), transparent 60%)`;
+    const glareBackground = useMotionTemplate`radial-gradient(90px circle at ${glareX}% ${glareY}%, rgba(255,255,255,0.06), transparent 75%)`;
 
     const onMouseMove = (e: React.MouseEvent<HTMLElement>) => {
         const r = e.currentTarget.getBoundingClientRect();
@@ -30,8 +30,8 @@ export const useTilt = ({ max = 9 }: TiltOptions = {}) => {
     const onMouseLeave = () => {
         rotateX.set(0);
         rotateY.set(0);
-        glareX.set(50);
-        glareY.set(50);
+        // Блик не возвращаем в центр — он плавно гаснет по opacity там,
+        // где был курсор, иначе визуально «уезжает» в центр карточки.
     };
 
     return {

@@ -8,11 +8,21 @@ interface SearchFormProps {
 }
 
 const STORAGE_KEY = 'chaosage_search_history';
+const LAST_SEARCH_KEY = 'chaosage:lastSearch';
 const MAX_HISTORY = 10;
 
+const readLastSearch = (): string[] => {
+    try {
+        const parsed = JSON.parse(localStorage.getItem(LAST_SEARCH_KEY) || '[]');
+        return Array.isArray(parsed) ? parsed.filter((n): n is string => typeof n === 'string') : [];
+    } catch {
+        return [];
+    }
+};
+
 export const SearchForm: React.FC<SearchFormProps> = ({ onSearch, isLoading }) => {
-    const [name1, setName1] = useState('');
-    const [name2, setName2] = useState('');
+    const [name1, setName1] = useState(() => readLastSearch()[0] ?? '');
+    const [name2, setName2] = useState(() => readLastSearch()[1] ?? '');
     const [history, setHistory] = useState<string[]>([]);
     const [activeHistoryField, setActiveHistoryField] = useState<1 | 2 | null>(null);
 
